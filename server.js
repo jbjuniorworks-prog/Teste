@@ -4,17 +4,22 @@ const fs = require('fs');
 const app = express();
 
 app.use(cors());
-// Aumentamos o limite para suportar o envio de fotos em Base64
 app.use(express.json({ limit: '10mb' })); 
 
 const CAMINHO_ARQUIVO = './dados.json';
 
 const lerDados = () => {
-    if (!fs.existsSync(CAMINHO_ARQUIVO)) return { minhaLoja: [] };
+    if (!fs.existsSync(CAMINHO_ARQUIVO)) {
+        fs.writeFileSync(CAMINHO_ARQUIVO, JSON.stringify({ minhaLoja: [] }));
+        return { minhaLoja: [] };
+    }
     try {
         return JSON.parse(fs.readFileSync(CAMINHO_ARQUIVO));
     } catch (e) { return { minhaLoja: [] }; }
 };
+
+// Rota inicial para o Render não dar erro de "Cannot GET /"
+app.get('/', (req, res) => res.send("🚀 SmartSync API Online"));
 
 app.get('/api/sincronizar', (req, res) => res.json(lerDados()));
 
@@ -32,7 +37,6 @@ app.post('/api/cadastrar', (req, res) => {
         preco: Number(preco),
         status: 'Em estoque',
         dataCadastro: new Date().toLocaleDateString('pt-BR'),
-        garantia: "90 dias"
     };
 
     banco.minhaLoja.push(novoItem);
@@ -55,17 +59,7 @@ app.put('/api/estoque/:id', (req, res) => {
     }
 });
 
-app.delete('/api/estoque/:id', (req, res) => {
-    const { id } = req.params;
-    let banco = lerDados();
-    banco.minhaLoja = banco.minhaLoja.filter(item => item.id !== parseInt(id));
-    fs.writeFileSync(CAMINHO_ARQUIVO, JSON.stringify(banco, null, 2));
-    res.json({ mensagem: "Excluído!" });
-});
-
-// O Render usa uma variável de ambiente chamada PORT, se não existir, ele usa a 3001
 const PORT = process.env.PORT || 3001;
-
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Backend Pro rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

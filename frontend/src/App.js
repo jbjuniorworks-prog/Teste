@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { db } from './db';
 
 const validarImeiReal = (imei) => {
   const n = imei.trim();
@@ -15,6 +14,9 @@ const validarImeiReal = (imei) => {
 
 const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
+// LINK DO SEU BACKEND NO RENDER
+const API_URL = 'https://teste-iaxg.onrender.com/api';
+
 function App() {
   const [busca, setBusca] = useState('');
   const [meuEstoque, setMeuEstoque] = useState([]);
@@ -25,11 +27,13 @@ function App() {
 
   const sincronizar = async () => {
     try {
-      const res = await fetch('https://teste-iaxg.onrender.com');
+      const res = await fetch(`${API_URL}/sincronizar`);
       const dados = await res.json();
-      setEstoqueCompleto(dados.minhaLoja);
+      setEstoqueCompleto(dados.minhaLoja || []);
       setStatus('✅ Sistema Atualizado');
-    } catch { setStatus('⚠️ Erro de Sincronização'); }
+    } catch { 
+      setStatus('⚠️ Erro de Sincronização'); 
+    }
   };
 
   useEffect(() => { sincronizar(); }, []);
@@ -45,68 +49,32 @@ function App() {
     e.preventDefault();
     if (!validarImeiReal(novoAparelho.imei)) return alert("❌ IMEI Inválido!");
     try {
-      const response = await fetch('http://localhost:3001/api/cadastrar', {
+      const response = await fetch(`${API_URL}/cadastrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...novoAparelho, foto })
       });
       if (response.ok) {
-        alert("✅ Cadastrado com Foto!");
+        alert("✅ Cadastrado com Sucesso!");
         setNovoAparelho({ cliente: '', aparelho: '', imei: '', preco: '' });
         setFoto("");
         sincronizar();
+      } else {
+        const errData = await response.json();
+        alert(errData.mensagem || "Erro ao salvar.");
       }
-    } catch (err) { alert("❌ Erro ao salvar."); }
-  };
-
-  const imprimirRecibo = (item) => {
-    const janela = window.open('', '', 'width=700,height=800');
-    janela.document.write(`
-      <html>
-        <body style="font-family:sans-serif; padding:30px;">
-          <h2 style="text-align:center;">RECIBO DE VENDA</h2>
-          <p><strong>Aparelho:</strong> ${item.aparelho}</p>
-          <p><strong>IMEI:</strong> ${item.imei}</p>
-          <p><strong>Valor:</strong> ${formatarMoeda(item.preco)}</p>
-          <p><strong>Data:</strong> ${item.dataVenda}</p>
-          ${item.foto ? `<img src="${item.foto}" style="width:200px; display:block; margin: 20px 0; border: 1px solid #ccc;"/>` : ""}
-          <p style="font-size:12px; color:#666;">Garantia: 90 dias contra defeitos funcionais.</p>
-        </body>
-      </html>
-    `);
-    janela.document.close();
-    janela.print();
-  };
-
-  const gerarRelatorioVendas = () => {
-    const vendidas = estoqueCompleto.filter(i => i.status === 'Vendido');
-    const total = vendidas.reduce((acc, i) => acc + i.preco, 0);
-    const janela = window.open('', '', 'width=800,height=600');
-    janela.document.write(`
-      <html>
-        <body style="font-family:sans-serif; padding:20px;">
-          <h2>Relatório Geral de Vendas</h2>
-          <table border="1" style="width:100%; border-collapse:collapse; text-align:left;">
-            <thead><tr style="background:#eee;"><th>Data</th><th>Aparelho</th><th>IMEI</th><th>Valor</th></tr></thead>
-            <tbody>
-              ${vendidas.map(i => `<tr><td>${i.dataVenda}</td><td>${i.aparelho}</td><td>${i.imei}</td><td>${formatarMoeda(i.preco)}</td></tr>`).join('')}
-            </tbody>
-          </table>
-          <h3>Total Bruto: ${formatarMoeda(total)}</h3>
-        </body>
-      </html>
-    `);
-    janela.document.close();
-    janela.print();
+    } catch (err) { alert("❌ Erro de conexão com o servidor."); }
   };
 
   const vender = async (id) => {
-    await fetch(`http://localhost:3001/api/estoque/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'Vendido' })
-    });
-    sincronizar();
+    try {
+      const res = await fetch(`${API_URL}/estoque/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Vendido' })
+      });
+      if (res.ok) sincronizar();
+    } catch (err) { alert("Erro ao processar venda."); }
   };
 
   useEffect(() => {
@@ -120,7 +88,7 @@ function App() {
     <div style={{ padding: '20px', maxWidth: '850px', margin: '0 auto', fontFamily: 'sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>SmartSync Pro 📱</h1>
-        <button onClick={gerarRelatorioVendas} style={{ background: '#333', color: 'white', padding: '10px', borderRadius: '8px', cursor: 'pointer' }}>📊 Gerar Relatório Mensal</button>
+        <small>{status}</small>
       </div>
 
       <div style={{ background: '#f4f4f4', padding: '20px', borderRadius: '12px', marginBottom: '20px' }}>
@@ -131,7 +99,7 @@ function App() {
           <input placeholder="IMEI" value={novoAparelho.imei} onChange={e => setNovoAparelho({...novoAparelho, imei: e.target.value})} required />
           <input placeholder="Preço" type="number" value={novoAparelho.preco} onChange={e => setNovoAparelho({...novoAparelho, preco: e.target.value})} required />
           <div style={{ gridColumn: 'span 2' }}>
-             <label>📸 Foto do Estado do Celular: </label>
+             <label>📸 Foto: </label>
              <input type="file" accept="image/*" onChange={converterFoto} />
           </div>
           <button type="submit" style={{ gridColumn: 'span 2', background: '#28a745', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>SALVAR NO SISTEMA</button>
@@ -151,8 +119,8 @@ function App() {
                 <span style={{ color: item.status === 'Vendido' ? 'red' : 'green', fontSize: '12px' }}>● {item.status.toUpperCase()}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              {item.status === 'Vendido' ? <button onClick={() => imprimirRecibo(item)}>🖨️ Recibo</button> : <button onClick={() => vender(item.id)}>💰 Vender</button>}
+            <div>
+              {item.status !== 'Vendido' && <button onClick={() => vender(item.id)}>💰 Vender</button>}
             </div>
           </div>
         ))}
