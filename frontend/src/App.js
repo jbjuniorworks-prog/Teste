@@ -25,7 +25,7 @@ function App() {
 
   const sincronizar = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/sincronizar');
+      const res = await fetch('https://teste-iaxg.onrender.com');
       const dados = await res.json();
       setEstoqueCompleto(dados.minhaLoja);
       setStatus('✅ Sistema Atualizado');
