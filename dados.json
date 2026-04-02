@@ -1,0 +1,53 @@
+{
+  "minhaLoja": [
+    {
+      "id": 1774970748322,
+      "cliente": "gon frics",
+      "aparelho": "motorola g10",
+      "imei": "01203i1023i",
+      "preco": 1200,
+      "status": "Vendido"
+    },
+    {
+      "id": 1774971060432,
+      "cliente": "mirabel",
+      "aparelho": "moto z",
+      "imei": "123456",
+      "preco": 3000,
+      "status": "Vendido"
+    },
+    {
+      "id": 1774971452046,
+      "cliente": "123123",
+      "aparelho": "123123",
+      "imei": "123456",
+      "preco": 123123,
+      "status": "Vendido"
+    },
+    {
+      "id": 1774971641950,
+      "cliente": "123",
+      "aparelho": "123",
+      "imei": "123456",
+      "preco": 12312343,
+      "status": "Vendido"
+    },
+    {
+      "id": 1774971890989,
+      "cliente": "Luan",
+      "aparelho": "Zen fone",
+      "imei": "123456",
+      "preco": 1200,
+      "status": "Vendido"
+    },
+    {
+      "id": 1774972638367,
+      "cliente": "lucas piu piu",
+      "aparelho": "redmi 12",
+      "imei": "123456",
+      "preco": 1200,
+      "status": "Vendido"
+    }
+  ],
+  "concorrentes": []
+}
