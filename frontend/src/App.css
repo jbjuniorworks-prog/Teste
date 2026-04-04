@@ -1,38 +1,210 @@
-.App {
+:root {
+  --primary: #27ae60;
+  --secondary: #2980b9;
+  --danger: #e74c3c;
+  --dark: #2c3e50;
+  --light: #f8f9fa;
+  --border: #dee2e6;
+}
+
+/* Configurações Gerais */
+body { 
+  background-color: #f0f2f5; 
+  font-family: 'Inter', -apple-system, sans-serif; 
+  margin: 0;
+  padding: 20px; 
+  color: var(--dark);
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.header-app {
   text-align: center;
+  margin-bottom: 30px;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.header-app h1 { margin-bottom: 5px; color: var(--dark); }
+.header-app p { color: #666; margin-top: 0; }
+
+/* --- SEÇÃO DO FORMULÁRIO DE CADASTRO --- */
+.form-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 40px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.form-card h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--light);
+  padding-bottom: 10px;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.grid-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.grid-form input {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.grid-form input:focus {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.1);
+}
+
+.btn-save {
+  background-color: var(--dark);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 12px;
+  transition: 0.3s;
+  grid-column: 1 / -1; /* Botão ocupa a largura toda */
+}
+
+.btn-save:hover { background-color: #1a252f; transform: translateY(-2px); }
+
+/* --- BUSCA --- */
+.main-search {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 30px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.main-search:focus { border-color: var(--primary); }
+
+/* --- GRID DE CARDS --- */
+.grid-estoque {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
+  transition: 0.3s ease;
+}
+
+.card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+
+/* Foto e Status */
+.card-header {
+  position: relative;
+  height: 180px;
+  background: #eee;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+}
+
+.card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-img { font-size: 50px; }
+
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
   color: white;
+  text-transform: uppercase;
 }
 
-.App-link {
-  color: #61dafb;
+.bg-green { background-color: var(--primary); }
+.bg-red { background-color: var(--danger); }
+
+/* Informações do Card */
+.card-body {
+  padding: 15px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.card-body h3 { margin: 0 0 10px 0; font-size: 1.1rem; }
+.card-body p { margin: 5px 0; font-size: 13px; color: #555; }
+
+.price {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--primary);
+  margin-top: 10px !important;
+}
+
+/* --- BOTÕES DE AÇÃO NO CARD --- */
+.card-actions {
+  display: flex;
+  padding: 15px;
+  gap: 8px;
+  border-top: 1px solid var(--light);
+  margin-top: auto;
+}
+
+.card-actions button {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  transition: 0.2s;
+}
+
+.btn-status { flex: 2; background: #eee; color: var(--dark); }
+.btn-status:hover { background: #e0e0e0; }
+
+.btn-edit { flex: 2; background: var(--secondary); color: white; }
+.btn-del { flex: 1; background: var(--light); color: var(--danger); }
+.btn-del:hover { background: var(--danger); color: white; }
+
+/* Estilo para item Vendido */
+.card.vendido {
+  border-color: #ffcccc;
+}
+.card.vendido .card-body {
+  background-color: #fffafa;
+}
+
+/* --- RESPONSIVIDADE CELULAR --- */
+@media (max-width: 600px) {
+  body { padding: 10px; }
+  
+  .grid-form { grid-template-columns: 1fr; }
+  
+  .grid-estoque {
+    grid-template-columns: 1fr;
   }
-  to {
-    transform: rotate(360deg);
-  }
+
+  .card-header { height: 200px; }
 }
