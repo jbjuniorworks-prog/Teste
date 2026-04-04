@@ -8,6 +8,19 @@ app.use(express.json({ limit: '10mb' }));
 
 const CAMINHO_ARQUIVO = './dados.json';
 
+// VALIDAÇÃO DE IMEI (Luhn Algorithm)
+const validarImeiReal = (imei) => {
+    const n = imei.trim();
+    if (n.length !== 15 || !/^\d+$/.test(n)) return false;
+    let soma = 0;
+    for (let i = 0; i < 15; i++) {
+        let d = parseInt(n.charAt(i));
+        if (i % 2 !== 0) { d *= 2; if (d > 9) d -= 9; }
+        soma += d;
+    }
+    return soma % 10 === 0;
+};
+
 const lerDados = () => {
     try {
         if (!fs.existsSync(CAMINHO_ARQUIVO)) return { minhaLoja: [] };
@@ -22,7 +35,18 @@ app.get('/api/sincronizar', (req, res) => res.json(lerDados()));
 
 app.post('/api/salvar', (req, res) => {
     const { cliente, aparelho, imei, preco, foto } = req.body;
+    
+    // Validação 1: IMEI Real
+    if (!validarImeiReal(imei)) {
+        return res.status(400).json({ mensagem: "❌ Erro: IMEI inválido ou falso!" });
+    }
+
     const banco = lerDados();
+
+    // Validação 2: Duplicidade
+    if (banco.minhaLoja.find(item => item.imei === imei)) {
+        return res.status(400).json({ mensagem: "⚠️ Erro: Este IMEI já está cadastrado!" });
+    }
     
     const novoItem = { 
         id: Date.now(), 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// URL do seu backend no Render
 const API_URL = 'https://teste-iaxg.onrender.com/api'; 
 
 function App() {
@@ -10,7 +9,12 @@ function App() {
   const [foto, setFoto] = useState("");
   const [novoAparelho, setNovoAparelho] = useState({ cliente: '', aparelho: '', imei: '', preco: '' });
 
-  // 1. Sincronizar dados com o servidor
+  // ATUALIZAÇÃO: Formatação de Moeda Brasileira
+  const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { 
+    style: 'currency', 
+    currency: 'BRL' 
+  }).format(v);
+
   const sincronizar = async () => {
     try {
       const res = await fetch(`${API_URL}/sincronizar`);
@@ -23,7 +27,6 @@ function App() {
 
   useEffect(() => { sincronizar(); }, []);
 
-  // 2. Salvar novo aparelho
   const salvarNoSistema = async (e) => {
     e.preventDefault();
     if (!novoAparelho.cliente || !novoAparelho.aparelho || !novoAparelho.imei) {
@@ -37,21 +40,21 @@ function App() {
         body: JSON.stringify({ ...novoAparelho, foto })
       });
 
+      const resultado = await res.json();
+
       if (res.ok) {
         alert("✅ Cadastrado com sucesso!");
         setNovoAparelho({ cliente: '', aparelho: '', imei: '', preco: '' });
         setFoto("");
         sincronizar();
       } else {
-        const erro = await res.json();
-        alert(erro.mensagem);
+        alert(resultado.mensagem); // Mostra o erro de IMEI Inválido do servidor
       }
     } catch (err) {
       alert("Erro ao conectar com o servidor.");
     }
   };
 
-  // 3. Editar informações (Preço, Nome ou Modelo)
   const editarItem = async (item) => {
     const opcao = prompt("O que deseja editar? \n1: Preço \n2: Cliente \n3: Aparelho");
     let payload = {};
@@ -77,7 +80,6 @@ function App() {
     }
   };
 
-  // 4. Alternar entre Vendido e Estoque
   const mudarStatus = async (item) => {
     const novoStatus = item.status === 'Vendido' ? 'Em estoque' : 'Vendido';
     await fetch(`${API_URL}/estoque/${item.id}`, {
@@ -88,7 +90,6 @@ function App() {
     sincronizar();
   };
 
-  // 5. Excluir permanentemente
   const excluir = async (id) => {
     if (window.confirm("⚠️ Excluir permanentemente este registro?")) {
       await fetch(`${API_URL}/estoque/${id}`, { method: 'DELETE' });
@@ -145,7 +146,7 @@ function App() {
               <h3>{item.aparelho}</h3>
               <p><strong>Dono:</strong> {item.cliente}</p>
               <p><strong>IMEI:</strong> {item.imei}</p>
-              <p className="price">R$ {item.preco}</p>
+              <p className="price">{formatarMoeda(item.preco)}</p>
             </div>
             <div className="card-actions">
               <button className="btn-status" onClick={() => mudarStatus(item)}>
