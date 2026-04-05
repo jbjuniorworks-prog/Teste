@@ -21,7 +21,11 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
+node_modules/
+.env
+build/
+dados.json
+.DS_Store
 node_modules/
 frontend/node_modules/
 build/

@@ -37,9 +37,9 @@ app.post('/api/salvar', (req, res) => {
     const { cliente, aparelho, imei, preco, foto } = req.body;
     
     // Validação 1: IMEI Real
-    if (!validarImeiReal(imei)) {
-        return res.status(400).json({ mensagem: "❌ Erro: IMEI inválido ou falso!" });
-    }
+   if (!validarImeiReal(imei)) {
+    return res.status(400).json({ mensagem: "❌ Erro: IMEI inválido ou falso!" });
+}
 
     const banco = lerDados();
 
