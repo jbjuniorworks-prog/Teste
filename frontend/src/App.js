@@ -8,7 +8,13 @@ function App() {
   const [busca, setBusca] = useState('');
   const [foto, setFoto] = useState("");
   const [novoAparelho, setNovoAparelho] = useState({ cliente: '', aparelho: '', imei: '', preco: '' });
-  const [user, setUser] = useState(null);
+
+  // BUSCA USUÁRIO SALVO NA MEMÓRIA AO CARREGAR A PÁGINA
+  const [user, setUser] = useState(() => {
+    const salvo = localStorage.getItem('usuario_logado');
+    return salvo ? JSON.parse(salvo) : null;
+  });
+
   const [credenciais, setCredenciais] = useState({ usuario: '', senha: '' });
 
   const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -32,9 +38,27 @@ function App() {
 
   const fazerLogin = (e) => {
     e.preventDefault();
-    if (credenciais.usuario === 'admin' && credenciais.senha === 'admin123') setUser({ nome: 'Admin', papel: 'admin' });
-    else if (credenciais.usuario === 'vendedor' && credenciais.senha === 'loja123') setUser({ nome: 'Vendedor', papel: 'vendedor' });
-    else alert("Dados incorretos!");
+    let usuarioEncontrado = null;
+
+    if (credenciais.usuario === 'admin' && credenciais.senha === 'admin123') {
+      usuarioEncontrado = { nome: 'Admin', papel: 'admin' };
+    } else if (credenciais.usuario === 'vendedor' && credenciais.senha === 'loja123') {
+      usuarioEncontrado = { nome: 'Vendedor', papel: 'vendedor' };
+    }
+
+    if (usuarioEncontrado) {
+      setUser(usuarioEncontrado);
+      // SALVA NA MEMÓRIA DO NAVEGADOR (LocalStorage)
+      localStorage.setItem('usuario_logado', JSON.stringify(usuarioEncontrado));
+    } else {
+      alert("Dados incorretos!");
+    }
+  };
+
+  // FUNÇÃO PARA SAIR E LIMPAR A MEMÓRIA
+  const fazerLogout = () => {
+    setUser(null);
+    localStorage.removeItem('usuario_logado');
   };
 
   if (!user) return (
@@ -53,7 +77,7 @@ function App() {
       <header className="header-app">
         <div className="user-info">
           <span>👤 {user.nome} ({user.papel})</span>
-          <button onClick={() => setUser(null)} className="btn-logout">Sair</button>
+          <button onClick={fazerLogout} className="btn-logout">Sair</button>
         </div>
         <div className="dashboard-stats">
           <div className="stat-card"><span>ESTOQUE</span><h3>{formatarMoeda(stats.valorEstoque)}</h3></div>
