@@ -35,7 +35,7 @@ function App() {
       const res = await fetch(`${API_URL}/sincronizar`);
       const dados = await res.json();
       setMeuEstoque(dados.minhaLoja || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Erro ao sincronizar:", err); }
   };
 
   useEffect(() => { sincronizar(); }, []);
@@ -53,7 +53,7 @@ function App() {
       setUser(usuarioEncontrado);
       localStorage.setItem('usuario_logado', JSON.stringify(usuarioEncontrado));
     } else {
-      alert("Dados incorretos!");
+      alert("Usuário ou senha incorretos!");
     }
   };
 
@@ -65,7 +65,7 @@ function App() {
   if (!user) return (
     <div className="login-container">
       <form onSubmit={fazerLogin} className="login-card">
-        <h1>SmartSync Login</h1>
+        <h1>SmartSync Login 📱</h1>
         <input placeholder="Usuário" onChange={e => setCredenciais({...credenciais, usuario: e.target.value})} />
         <input type="password" placeholder="Senha" onChange={e => setCredenciais({...credenciais, senha: e.target.value})} />
         <button type="submit">ENTRAR</button>
@@ -77,19 +77,18 @@ function App() {
     <div className="container">
       <header className="header-app">
         <div className="user-info">
-          <span>👤 <strong>{user.nome}</strong> ({user.papel})</span>
-          <button onClick={fazerLogout} className="btn-logout">Sair</button>
+          <span>👤 Bem-vindo, <strong>{user.nome}</strong></span>
+          <button onClick={fazerLogout} className="btn-logout">Sair do Sistema</button>
         </div>
         
-        {/* DASHBOARD AJUSTADO PARA O CSS NOVO */}
         <div className="dashboard-stats">
           <div className="stat-card">
-            <span>VALOR EM ESTOQUE</span>
+            <span>💰 VALOR EM ESTOQUE</span>
             <h3>{formatarMoeda(stats.valorEstoque)}</h3>
-            <p>{stats.estoqueItem} aparelhos</p>
+            <p>{stats.estoqueItem} aparelhos ativos</p>
           </div>
           <div className="stat-card">
-            <span>TOTAL VENDIDO</span>
+            <span>📈 TOTAL VENDIDO</span>
             <h3>{formatarMoeda(stats.faturamento)}</h3>
             <p>{stats.vendidos} aparelhos vendidos</p>
           </div>
@@ -98,23 +97,48 @@ function App() {
 
       {user.papel === 'admin' && (
         <div className="form-card">
-          <h2>Novo Cadastro</h2>
+          <h2>📦 Cadastrar Novo Aparelho</h2>
           <form onSubmit={async (e) => {
             e.preventDefault();
             const res = await fetch(`${API_URL}/salvar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...novoAparelho, foto }) });
-            if (res.ok) { alert("Sucesso!"); sincronizar(); } else { const d = await res.json(); alert(d.mensagem); }
+            if (res.ok) { 
+              alert("✅ Cadastrado com sucesso!"); 
+              setNovoAparelho({ cliente: '', aparelho: '', imei: '', preco: '' });
+              setFoto("");
+              sincronizar(); 
+            } else { 
+              const d = await res.json(); 
+              alert(d.mensagem); 
+            }
           }} className="grid-form">
-            <input placeholder="Cliente" value={novoAparelho.cliente} onChange={e => setNovoAparelho({...novoAparelho, cliente: e.target.value})} />
-            <input placeholder="Aparelho" value={novoAparelho.aparelho} onChange={e => setNovoAparelho({...novoAparelho, aparelho: e.target.value})} />
-            <input placeholder="IMEI" value={novoAparelho.imei} onChange={e => setNovoAparelho({...novoAparelho, imei: e.target.value})} />
-            <input placeholder="Preço" type="number" value={novoAparelho.preco} onChange={e => setNovoAparelho({...novoAparelho, preco: e.target.value})} />
-            <input type="file" onChange={e => { const r = new FileReader(); r.onload = () => setFoto(r.result); r.readAsDataURL(e.target.files[0]); }} />
-            <button type="submit" className="btn-save">CADASTRAR</button>
+            <div className="input-group">
+              <label>Cliente</label>
+              <input value={novoAparelho.cliente} onChange={e => setNovoAparelho({...novoAparelho, cliente: e.target.value})} placeholder="Nome do dono" />
+            </div>
+            <div className="input-group">
+              <label>Aparelho</label>
+              <input value={novoAparelho.aparelho} onChange={e => setNovoAparelho({...novoAparelho, aparelho: e.target.value})} placeholder="Ex: iPhone 13" />
+            </div>
+            <div className="input-group">
+              <label>IMEI</label>
+              <input value={novoAparelho.imei} onChange={e => setNovoAparelho({...novoAparelho, imei: e.target.value})} placeholder="15 dígitos" />
+            </div>
+            <div className="input-group">
+              <label>Preço</label>
+              <input type="number" value={novoAparelho.preco} onChange={e => setNovoAparelho({...novoAparelho, preco: e.target.value})} placeholder="R$" />
+            </div>
+            <div className="input-group">
+              <label>Foto</label>
+              <input type="file" onChange={e => { const r = new FileReader(); r.onload = () => setFoto(r.result); r.readAsDataURL(e.target.files[0]); }} />
+            </div>
+            <button type="submit" className="btn-save">SALVAR NO ESTOQUE</button>
           </form>
         </div>
       )}
 
-      <input className="main-search" placeholder="🔍 Pesquisar modelo, IMEI ou cliente..." onChange={e => setBusca(e.target.value)} />
+      <div className="search-box">
+        <input className="main-search" placeholder="🔍 Pesquisar por modelo, IMEI ou cliente..." onChange={e => setBusca(e.target.value)} />
+      </div>
 
       <div className="grid-estoque">
         {meuEstoque.filter(i => 
@@ -137,11 +161,13 @@ function App() {
               <button className="btn-status" onClick={async () => {
                 await fetch(`${API_URL}/estoque/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: item.status === 'Vendido' ? 'Em estoque' : 'Vendido' }) });
                 sincronizar();
-              }}>{item.status === 'Vendido' ? 'Reativar' : 'Vender'}</button>
+              }}>
+                {item.status === 'Vendido' ? '🔄 Reativar' : '🤝 Vender'}
+              </button>
               
               {user.papel === 'admin' && (
                 <button className="btn-del" onClick={async () => { 
-                  if(window.confirm("Apagar permanentemente?")) { 
+                  if(window.confirm("⚠️ Excluir permanentemente?")) { 
                     await fetch(`${API_URL}/estoque/${item.id}`, { method: 'DELETE' }); 
                     sincronizar(); 
                   } 
