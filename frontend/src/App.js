@@ -7,7 +7,7 @@ function App() {
   const [meuEstoque, setMeuEstoque] = useState([]);
   const [busca, setBusca] = useState('');
   const [foto, setFoto] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState('Todos'); // NOVO: Filtro de exibição
+  const [filtroStatus, setFiltroStatus] = useState('Todos');
   const [novoAparelho, setNovoAparelho] = useState({ cliente: '', aparelho: '', imei: '', preco: '' });
 
   const [user, setUser] = useState(() => {
@@ -19,7 +19,6 @@ function App() {
 
   const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
-  // FUNÇÃO PARA IMPRIMIR RECIBO (MELHORIA 4)
   const imprimirRecibo = (item) => {
     const janela = window.open('', '', 'width=800,height=600');
     janela.document.write(`
@@ -41,7 +40,7 @@ function App() {
             <p><strong>CLIENTE:</strong> ${item.cliente.toUpperCase()}</p>
             <p><strong>APARELHO:</strong> ${item.aparelho}</p>
             <p><strong>IMEI:</strong> ${item.imei}</p>
-            <p><strong>DATA:</strong> ${new Date().toLocaleDateString('pt-BR')}</p>
+            <p><strong>DATA:</strong> ${item.dataVenda ? item.dataVenda.split(',')[0] : new Date().toLocaleDateString('pt-BR')}</p>
             <p><strong>VALOR:</strong> ${formatarMoeda(item.preco)}</p>
           </div>
           <div class="assinatura"><p>Assinatura da Loja</p></div>
@@ -86,9 +85,7 @@ function App() {
     if (usuarioEncontrado) {
       setUser(usuarioEncontrado);
       localStorage.setItem('usuario_logado', JSON.stringify(usuarioEncontrado));
-    } else {
-      alert("Erro no login!");
-    }
+    } else { alert("Erro no login!"); }
   };
 
   if (!user) return (
@@ -129,6 +126,9 @@ function App() {
           <h2>📦 Cadastrar</h2>
           <form onSubmit={async (e) => {
             e.preventDefault();
+            if (!novoAparelho.cliente || !novoAparelho.aparelho || !novoAparelho.imei || !novoAparelho.preco) {
+              return alert("⚠️ Preencha todos os campos!");
+            }
             const res = await fetch(`${API_URL}/salvar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...novoAparelho, foto }) });
             if (res.ok) { 
               setNovoAparelho({ cliente: '', aparelho: '', imei: '', preco: '' });
@@ -141,14 +141,22 @@ function App() {
             <input value={novoAparelho.imei} onChange={e => setNovoAparelho({...novoAparelho, imei: e.target.value})} placeholder="IMEI" />
             <input type="number" value={novoAparelho.preco} onChange={e => setNovoAparelho({...novoAparelho, preco: e.target.value})} placeholder="R$" />
             <input type="file" onChange={e => { const r = new FileReader(); r.onload = () => setFoto(r.result); r.readAsDataURL(e.target.files[0]); }} />
-            <button type="submit" className="btn-save">SALVAR</button>
+            
+            <button 
+              type="submit" 
+              className="btn-save"
+              disabled={!novoAparelho.cliente || !novoAparelho.aparelho || !novoAparelho.imei || !novoAparelho.preco}
+              style={{ opacity: (!novoAparelho.cliente || !novoAparelho.aparelho || !novoAparelho.imei || !novoAparelho.preco) ? 0.5 : 1 }}
+            >
+              SALVAR
+            </button>
           </form>
         </div>
       )}
 
       <div className="filter-bar" style={{marginBottom: '20px', display: 'flex', gap: '10px'}}>
         <button onClick={() => setFiltroStatus('Todos')} className={filtroStatus === 'Todos' ? 'active' : ''}>Todos</button>
-        <button onClick={() => setFiltroStatus('Em estoque')}>Em Estoque</button>
+        <button onClick={() => setFiltroStatus('Em estoque')}>Estoque</button>
         <button onClick={() => setFiltroStatus('Vendido')}>Vendidos</button>
       </div>
 
@@ -168,19 +176,24 @@ function App() {
                 <h3>{item.aparelho}</h3>
                 <p><strong>Dono:</strong> {item.cliente}</p>
                 <p><strong>IMEI:</strong> {item.imei}</p>
+                <p><strong>Cadastrado:</strong> {item.dataCadastro}</p>
+                {item.status === 'Vendido' && item.dataVenda && (
+                  <p style={{color: 'red', fontWeight: 'bold'}}>📅 Vendido: {item.dataVenda}</p>
+                )}
                 <p className="price">{formatarMoeda(item.preco)}</p>
               </div>
               <div className="card-actions">
                 <button className="btn-status" onClick={async () => {
-                  await fetch(`${API_URL}/estoque/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: item.status === 'Vendido' ? 'Em estoque' : 'Vendido', dataVenda: new Date().toISOString() }) });
+                  await fetch(`${API_URL}/estoque/${item.id}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ status: item.status === 'Vendido' ? 'Em estoque' : 'Vendido' }) 
+                  });
                   sincronizar();
                 }}>
                   {item.status === 'Vendido' ? '🔄 Reativar' : '🤝 Vender'}
                 </button>
-                
-                {/* BOTÃO DE IMPRIMIR (MELHORIA 4) */}
                 <button onClick={() => imprimirRecibo(item)} style={{background: '#edf2f7', border: 'none', borderRadius: '6px', cursor: 'pointer'}}>📄</button>
-
                 {user.papel === 'admin' && (
                   <button className="btn-del" onClick={async () => { if(window.confirm("Excluir?")) { await fetch(`${API_URL}/estoque/${item.id}`, { method: 'DELETE' }); sincronizar(); } }}>🗑️</button>
                 )}
@@ -191,4 +204,5 @@ function App() {
     </div>
   );
 }
+
 export default App;
