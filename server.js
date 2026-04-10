@@ -8,7 +8,6 @@ app.use(express.json({ limit: '10mb' }));
 
 const CAMINHO_ARQUIVO = './dados.json';
 
-// VALIDAÇÃO DE IMEI (Luhn Algorithm)
 const validarImeiReal = (imei) => {
     const n = imei.trim();
     if (n.length !== 15 || !/^\d+$/.test(n)) return false;
@@ -30,32 +29,19 @@ const lerDados = () => {
 };
 
 app.get('/', (req, res) => res.send("🚀 SmartSync API Online"));
-
 app.get('/api/sincronizar', (req, res) => res.json(lerDados()));
 
 app.post('/api/salvar', (req, res) => {
     const { cliente, aparelho, imei, preco, foto } = req.body;
-    
-    // Validação 1: IMEI Real
-   if (!validarImeiReal(imei)) {
-    return res.status(400).json({ mensagem: "❌ Erro: IMEI inválido ou falso!" });
-}
-
+    if (!validarImeiReal(imei)) return res.status(400).json({ mensagem: "❌ IMEI inválido!" });
     const banco = lerDados();
-
-    // Validação 2: Duplicidade
-    if (banco.minhaLoja.find(item => item.imei === imei)) {
-        return res.status(400).json({ mensagem: "⚠️ Erro: Este IMEI já está cadastrado!" });
-    }
+    if (banco.minhaLoja.find(item => item.imei === imei)) return res.status(400).json({ mensagem: "⚠️ IMEI já cadastrado!" });
     
     const novoItem = { 
-        id: Date.now(), 
-        cliente, aparelho, imei, foto,
-        preco: Number(preco),
-        status: 'Em estoque',
+        id: Date.now(), cliente, aparelho, imei, foto,
+        preco: Number(preco), status: 'Em estoque',
         dataCadastro: new Date().toLocaleDateString('pt-BR')
     };
-    
     banco.minhaLoja.push(novoItem);
     fs.writeFileSync(CAMINHO_ARQUIVO, JSON.stringify(banco, null, 2));
     res.json(novoItem);
@@ -65,22 +51,20 @@ app.put('/api/estoque/:id', (req, res) => {
     const { id } = req.params;
     let banco = lerDados();
     const index = banco.minhaLoja.findIndex(item => item.id === parseInt(id));
-    
     if (index !== -1) {
         banco.minhaLoja[index] = { ...banco.minhaLoja[index], ...req.body };
         fs.writeFileSync(CAMINHO_ARQUIVO, JSON.stringify(banco, null, 2));
         res.json(banco.minhaLoja[index]);
-    } else {
-        res.status(404).send("Item não encontrado");
-    }
+    } else { res.status(404).send("Item não encontrado"); }
 });
 
 app.delete('/api/estoque/:id', (req, res) => {
     const { id } = req.params;
     let banco = lerDados();
-    banco.minhaLoja = banco.minhaLoja.filter(item => item.id !== parseInt(id));
+    const novaLista = banco.minhaLoja.filter(item => item.id !== parseInt(id));
+    banco.minhaLoja = novaLista;
     fs.writeFileSync(CAMINHO_ARQUIVO, JSON.stringify(banco, null, 2));
-    res.json({ mensagem: "Excluído" });
+    res.json({ mensagem: "Excluído!" });
 });
 
 const PORT = process.env.PORT || 5000;

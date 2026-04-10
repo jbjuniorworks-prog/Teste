@@ -1,26 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://teste-iaxg.onrender.com/api'; 
+const API_URL = process.env.REACT_APP_API_URL || 'https://teste-iaxg.onrender.com/api';
 
 function App() {
   const [meuEstoque, setMeuEstoque] = useState([]);
   const [busca, setBusca] = useState('');
   const [foto, setFoto] = useState("");
   const [novoAparelho, setNovoAparelho] = useState({ cliente: '', aparelho: '', imei: '', preco: '' });
+  const [user, setUser] = useState(null);
+  const [credenciais, setCredenciais] = useState({ usuario: '', senha: '' });
 
   const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
-  // LÓGICA DO DASHBOARD
   const stats = meuEstoque.reduce((acc, item) => {
     const valor = Number(item.preco) || 0;
-    if (item.status === 'Vendido') {
-      acc.vendidos += 1;
-      acc.faturamento += valor;
-    } else {
-      acc.estoqueItem += 1;
-      acc.valorEstoque += valor;
-    }
+    if (item.status === 'Vendido') { acc.vendidos += 1; acc.faturamento += valor; }
+    else { acc.estoqueItem += 1; acc.valorEstoque += valor; }
     return acc;
   }, { vendidos: 0, faturamento: 0, estoqueItem: 0, valorEstoque: 0 });
 
@@ -29,131 +25,73 @@ function App() {
       const res = await fetch(`${API_URL}/sincronizar`);
       const dados = await res.json();
       setMeuEstoque(dados.minhaLoja || []);
-    } catch (err) { console.error("Erro ao sincronizar:", err); }
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => { sincronizar(); }, []);
 
-  const salvarNoSistema = async (e) => {
+  const fazerLogin = (e) => {
     e.preventDefault();
-    if (!novoAparelho.cliente || !novoAparelho.aparelho || !novoAparelho.imei) {
-      return alert("Preencha os campos obrigatórios!");
-    }
-    try {
-      const res = await fetch(`${API_URL}/salvar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...novoAparelho, foto })
-      });
-      const resultado = await res.json();
-      if (res.ok) {
-        alert("✅ Cadastrado com sucesso!");
-        setNovoAparelho({ cliente: '', aparelho: '', imei: '', preco: '' });
-        setFoto("");
-        sincronizar();
-      } else { alert(resultado.mensagem); }
-    } catch (err) { alert("Erro ao conectar com o servidor."); }
+    if (credenciais.usuario === 'admin' && credenciais.senha === 'admin123') setUser({ nome: 'Admin', papel: 'admin' });
+    else if (credenciais.usuario === 'vendedor' && credenciais.senha === 'loja123') setUser({ nome: 'Vendedor', papel: 'vendedor' });
+    else alert("Dados incorretos!");
   };
 
-  const editarItem = async (item) => {
-    const opcao = prompt("O que deseja editar? \n1: Preço \n2: Cliente \n3: Aparelho");
-    let payload = {};
-    if (opcao === "1") {
-      const valor = prompt("Novo Preço:", item.preco);
-      if (valor) payload = { preco: Number(valor) };
-    } else if (opcao === "2") {
-      const valor = prompt("Novo nome do Cliente:", item.cliente);
-      if (valor) payload = { cliente: valor };
-    } else if (opcao === "3") {
-      const valor = prompt("Novo Modelo:", item.aparelho);
-      if (valor) payload = { aparelho: valor };
-    }
-    if (Object.keys(payload).length > 0) {
-      await fetch(`${API_URL}/estoque/${item.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      sincronizar();
-    }
-  };
-
-  const mudarStatus = async (item) => {
-    const novoStatus = item.status === 'Vendido' ? 'Em estoque' : 'Vendido';
-    await fetch(`${API_URL}/estoque/${item.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: novoStatus })
-    });
-    sincronizar();
-  };
-
-  const excluir = async (id) => {
-    if (window.confirm("⚠️ Excluir permanentemente este registro?")) {
-      await fetch(`${API_URL}/estoque/${id}`, { method: 'DELETE' });
-      sincronizar();
-    }
-  };
-
-  const listaFiltrada = meuEstoque.filter(i => 
-    i.aparelho.toLowerCase().includes(busca.toLowerCase()) || 
-    i.imei.includes(busca) ||
-    i.cliente.toLowerCase().includes(busca.toLowerCase())
+  if (!user) return (
+    <div className="login-container">
+      <form onSubmit={fazerLogin} className="login-card">
+        <h1>SmartSync Login</h1>
+        <input placeholder="Usuário" onChange={e => setCredenciais({...credenciais, usuario: e.target.value})} />
+        <input type="password" placeholder="Senha" onChange={e => setCredenciais({...credenciais, senha: e.target.value})} />
+        <button type="submit">ENTRAR</button>
+      </form>
+    </div>
   );
 
   return (
     <div className="container">
       <header className="header-app">
-        <h1>SmartSync Pro 📱</h1>
+        <div className="user-info">
+          <span>👤 {user.nome} ({user.papel})</span>
+          <button onClick={() => setUser(null)} className="btn-logout">Sair</button>
+        </div>
         <div className="dashboard-stats">
-          <div className="stat-card">
-            <span>VALOR EM ESTOQUE</span>
-            <h3>{formatarMoeda(stats.valorEstoque)}</h3>
-            <small>{stats.estoqueItem} aparelhos</small>
-          </div>
-          <div className="stat-card">
-            <span>TOTAL VENDIDO</span>
-            <h3>{formatarMoeda(stats.faturamento)}</h3>
-            <small>{stats.vendidos} aparelhos</small>
-          </div>
+          <div className="stat-card"><span>ESTOQUE</span><h3>{formatarMoeda(stats.valorEstoque)}</h3></div>
+          <div className="stat-card"><span>VENDAS</span><h3>{formatarMoeda(stats.faturamento)}</h3></div>
         </div>
       </header>
 
-      <div className="form-card">
-        <h2>Novo Cadastro</h2>
-        <form onSubmit={salvarNoSistema} className="grid-form">
-          <input placeholder="Cliente" value={novoAparelho.cliente} onChange={e => setNovoAparelho({...novoAparelho, cliente: e.target.value})} />
-          <input placeholder="Aparelho" value={novoAparelho.aparelho} onChange={e => setNovoAparelho({...novoAparelho, aparelho: e.target.value})} />
-          <input placeholder="IMEI" value={novoAparelho.imei} onChange={e => setNovoAparelho({...novoAparelho, imei: e.target.value})} />
-          <input placeholder="Preço" type="number" value={novoAparelho.preco} onChange={e => setNovoAparelho({...novoAparelho, preco: e.target.value})} />
-          <input type="file" accept="image/*" onChange={e => {
-            const reader = new FileReader();
-            reader.onload = () => setFoto(reader.result);
-            reader.readAsDataURL(e.target.files[0]);
-          }} />
-          <button type="submit" className="btn-save">CADASTRAR</button>
-        </form>
-      </div>
+      {user.papel === 'admin' && (
+        <div className="form-card">
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const res = await fetch(`${API_URL}/salvar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...novoAparelho, foto }) });
+            if (res.ok) { alert("Sucesso!"); sincronizar(); } else { const d = await res.json(); alert(d.mensagem); }
+          }} className="grid-form">
+            <input placeholder="Cliente" onChange={e => setNovoAparelho({...novoAparelho, cliente: e.target.value})} />
+            <input placeholder="Aparelho" onChange={e => setNovoAparelho({...novoAparelho, aparelho: e.target.value})} />
+            <input placeholder="IMEI" onChange={e => setNovoAparelho({...novoAparelho, imei: e.target.value})} />
+            <input placeholder="Preço" type="number" onChange={e => setNovoAparelho({...novoAparelho, preco: e.target.value})} />
+            <input type="file" onChange={e => { const r = new FileReader(); r.onload = () => setFoto(r.result); r.readAsDataURL(e.target.files[0]); }} />
+            <button type="submit" className="btn-save">CADASTRAR</button>
+          </form>
+        </div>
+      )}
 
-      <input className="main-search" placeholder="🔍 Pesquisar modelo, IMEI ou cliente..." value={busca} onChange={e => setBusca(e.target.value)} />
-
+      <input className="main-search" placeholder="🔍 Pesquisar..." onChange={e => setBusca(e.target.value)} />
       <div className="grid-estoque">
-        {listaFiltrada.map(item => (
+        {meuEstoque.filter(i => i.aparelho.toLowerCase().includes(busca.toLowerCase())).map(item => (
           <div key={item.id} className={`card ${item.status === 'Vendido' ? 'vendido' : ''}`}>
-            <div className="card-header">
-              {item.foto ? <img src={item.foto} className="card-img" alt="foto" /> : <div className="no-img">📱</div>}
-              <span className={`badge ${item.status === 'Vendido' ? 'bg-red' : 'bg-green'}`}>{item.status}</span>
-            </div>
             <div className="card-body">
               <h3>{item.aparelho}</h3>
-              <p><strong>Dono:</strong> {item.cliente}</p>
-              <p><strong>IMEI:</strong> {item.imei}</p>
-              <p className="price">{formatarMoeda(item.preco)}</p>
+              <p>IMEI: {item.imei} | Preço: {formatarMoeda(item.preco)}</p>
             </div>
             <div className="card-actions">
-              <button className="btn-status" onClick={() => mudarStatus(item)}>{item.status === 'Vendido' ? 'Reativar' : 'Vender'}</button>
-              <button className="btn-edit" onClick={() => editarItem(item)}>✏️</button>
-              <button className="btn-del" onClick={() => excluir(item.id)}>🗑️</button>
+              <button onClick={async () => {
+                await fetch(`${API_URL}/estoque/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: item.status === 'Vendido' ? 'Em estoque' : 'Vendido' }) });
+                sincronizar();
+              }}>{item.status === 'Vendido' ? 'Reativar' : 'Vender'}</button>
+              {user.papel === 'admin' && <button onClick={async () => { if(window.confirm("Apagar?")) { await fetch(`${API_URL}/estoque/${item.id}`, { method: 'DELETE' }); sincronizar(); } }}>🗑️</button>}
             </div>
           </div>
         ))}
@@ -161,5 +99,4 @@ function App() {
     </div>
   );
 }
-
 export default App;
