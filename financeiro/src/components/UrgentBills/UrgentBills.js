@@ -1,27 +1,47 @@
 import React from "react";
 
-const fmt = (str) => str ? str.split("-").reverse().join("/") : "-";
+const fmt = (str) =>
+  str ? new Date(str + "T12:00:00").toLocaleDateString("pt-BR") : "-";
 
-export default function UrgentBills({ contas, onPagar }) {
+const money = (v) =>
+  Number(v || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+export default function UrgentBills({ contas = [], onPagar }) {
   if (contas.length === 0) return null;
+
   return (
-    <div className="urgent-area">
+    <section className="urgent-area">
       <div className="section-header">
-        <small className="urgent-title">VENCENDO EM BREVE</small>
-        <small className="urgent-count">{contas.length} conta{contas.length > 1 ? "s" : ""}</small>
+        <h3>Vencendo em breve</h3>
+        <small>Conta</small>
       </div>
-      {contas.map(t => (
-        <div key={t.id} className="urgent-card">
-          <div className="urgent-info">
-            <strong>{t.descricao}</strong>
-            <p>Vence {fmt(t.data_vencimento)}</p>
-          </div>
-          <div className="urgent-action">
-            <strong>R$ {(t.valor || 0).toFixed(2)}</strong>
-            <button className="btn-pay-small" onClick={() => onPagar(t)}>Pagar</button>
-          </div>
-        </div>
-      ))}
-    </div>
+
+      <div style={{ display: "grid", gap: "10px", marginTop: "12px" }}>
+        {contas.map((t) => (
+          <article key={t.id} className="urgent-card">
+            <div>
+              <strong>{t.descricao}</strong>
+              <p>Vence {fmt(t.data_vencimento)}</p>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <strong>{money(t.valor)}</strong>
+              <div style={{ marginTop: "8px" }}>
+                <button
+                  type="button"
+                  className="goal-btn"
+                  onClick={() => onPagar(t)}
+                >
+                  Pagar
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
