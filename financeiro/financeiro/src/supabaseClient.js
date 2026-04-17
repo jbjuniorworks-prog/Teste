@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://eroemwteqyuwccpafdtl.supabase.co' 
-// Use a chave que começa com eyJ que você configurou
-const supabaseAnonKey = 'sb_publishable_LDUQUNhcC4D21BNQdnFSdw__qwYuzxw'
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
