@@ -1,19 +1,22 @@
 import React, { useMemo, useState } from "react";
 import { CATEGORIAS } from "../../constants/categorias";
 
-const Icon = ({ path, size = 20 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+const Icon = ({ label, size = 20 }) => (
+  <span
+    aria-hidden="true"
+    style={{
+      width: size,
+      height: size,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: size - 2,
+      lineHeight: 1,
+      flexShrink: 0,
+    }}
   >
-    <path d={path} />
-  </svg>
+    {label?.[0]?.toUpperCase() || "•"}
+  </span>
 );
 
 export default function TransactionForm({ onSubmit, erro, setErro }) {
@@ -134,7 +137,7 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
             onClick={() => handleCategoriaChange(key)}
             aria-pressed={categoriaSel === key}
           >
-            <Icon path={cat.svg} size={18} />
+            <Icon label={cat.label} size={18} />
             <span>{cat.label}</span>
           </button>
         ))}

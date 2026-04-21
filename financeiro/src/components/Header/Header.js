@@ -102,11 +102,12 @@ export default function Header({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M10 14L21 3M21 3h-6m6 0v6M14 10L3 21M3 21h6m-6 0v-6" />
+            <path d="M4 12h16" />
+            <path d="M12 4v16" />
           </svg>
         </button>
       </div>
