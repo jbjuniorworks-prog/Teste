@@ -14,6 +14,7 @@ export default function Header({
   onAddGoal,
   onEditGoal,
   onDeleteGoal,
+  onLogout,
 }) {
   const saldo = ganhos - despesas;
   const objetivo = objetivos?.[0] || null;
@@ -85,30 +86,17 @@ export default function Header({
           </div>
           <div>
             <span>Boa noite,</span>
-            <strong>
-              {user?.email ? user.email.split("@")[0] : "usuário"}
-            </strong>
+            <strong>{user?.email ? user.email.split("@")[0] : "usuário"}</strong>
           </div>
         </div>
 
         <button
           type="button"
           className="notif-btn"
-          aria-label="Ações rápidas"
+          aria-label="Sair da conta"
+          onClick={onLogout}
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 12h16" />
-            <path d="M12 4v16" />
-          </svg>
+          Sair
         </button>
       </div>
 
@@ -132,11 +120,7 @@ export default function Header({
       <section className="section-goals">
         <div className="section-header">
           <h3>Objetivos</h3>
-          <button
-            type="button"
-            className="goal-btn"
-            onClick={onAddGoal}
-          >
+          <button type="button" className="goal-btn" onClick={onAddGoal}>
             + Novo
           </button>
         </div>
@@ -194,27 +178,15 @@ export default function Header({
                 flexWrap: "wrap",
               }}
             >
-              <button
-                type="button"
-                className="goal-btn"
-                onClick={guardarValor}
-              >
+              <button type="button" className="goal-btn" onClick={guardarValor}>
                 Guardar valor
               </button>
 
-              <button
-                type="button"
-                className="goal-btn"
-                onClick={editarObjetivo}
-              >
+              <button type="button" className="goal-btn" onClick={editarObjetivo}>
                 Editar
               </button>
 
-              <button
-                type="button"
-                className="goal-btn"
-                onClick={excluirObjetivo}
-              >
+              <button type="button" className="goal-btn" onClick={excluirObjetivo}>
                 Excluir
               </button>
             </div>
