@@ -1,16 +1,54 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
-
+import { supabase } from "./supabaseClient";
 import { useTransacoes } from "./hooks/useTransacoes";
 
+import Auth from "./components/Auth/Auth";
 import Header from "./components/Header/Header";
 import TransactionForm from "./components/TransactionForm/TransactionForm";
 import UrgentBills from "./components/UrgentBills/UrgentBills";
 import History from "./components/History/History";
 
 function App() {
-  const dummyUserId = "00000000-0000-0000-0000-000000000000";
-  const userSimulado = { email: "usuario@financas.com" };
+  const [session, setSession] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const carregarSessao = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (mounted) {
+        setSession(session);
+        setLoadingAuth(false);
+      }
+    };
+
+    carregarSessao();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoadingAuth(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
+
+  const user = session?.user || null;
+  const userId = user?.id || null;
 
   const {
     transacoes,
@@ -26,7 +64,7 @@ function App() {
     adicionarObjetivo,
     atualizarObjetivo,
     deletarObjetivo,
-  } = useTransacoes(dummyUserId);
+  } = useTransacoes(userId);
 
   const transacoesMes = transacoes.filter((t) =>
     t.data_vencimento?.startsWith(mesAtualStr)
@@ -47,13 +85,27 @@ function App() {
       currency: "BRL",
     });
 
+  if (loadingAuth) {
+    return (
+      <div className="app-dark-mode">
+        <div className="phone-container">
+          <div style={{ padding: 24, color: "#fff" }}>Carregando...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Auth />;
+  }
+
   return (
     <div className="app-dark-mode">
       <div className="phone-container">
         <Header
           ganhos={totaisMes.ganhos}
           despesas={totaisMes.despesas}
-          user={userSimulado}
+          user={user}
           objetivos={objetivos}
           onAddGoal={() => {
             const nome = prompt("Qual o nome do novo objetivo?");
@@ -77,6 +129,7 @@ function App() {
           }}
           onEditGoal={atualizarObjetivo}
           onDeleteGoal={deletarObjetivo}
+          onLogout={handleLogout}
         />
 
         <section className="quick-summary">

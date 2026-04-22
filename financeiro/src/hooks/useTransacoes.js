@@ -8,7 +8,11 @@ export function useTransacoes(userId) {
   const [erro, setErro] = useState("");
 
   const buscar = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setTransacoes([]);
+      setObjetivos([]);
+      return;
+    }
 
     setLoading(true);
     setErro("");
@@ -50,6 +54,11 @@ export function useTransacoes(userId) {
     categoriaSel,
     tipoForm,
   }) => {
+    if (!userId) {
+      setErro("Usuário não autenticado.");
+      return false;
+    }
+
     const vLimpo = parseFloat(String(valor).replace(",", "."));
 
     if (Number.isNaN(vLimpo) || vLimpo <= 0) {
@@ -110,16 +119,19 @@ export function useTransacoes(userId) {
   };
 
   const togglePago = async (t) => {
-    try {
-      const novoPago = !t.pago;
+    if (!userId) {
+      setErro("Usuário não autenticado.");
+      return;
+    }
 
+    try {
       const { error } = await supabase
         .from("transacoes")
-        .update({ pago: novoPago })
-        .eq("id", t.id);
+        .update({ pago: !t.pago })
+        .eq("id", t.id)
+        .eq("user_id", userId);
 
       if (error) throw error;
-
       await buscar();
     } catch (e) {
       console.error(e);
@@ -128,16 +140,21 @@ export function useTransacoes(userId) {
   };
 
   const deletarTransacao = async (id) => {
+    if (!userId) {
+      setErro("Usuário não autenticado.");
+      return;
+    }
+
     if (!window.confirm("Deseja excluir este item?")) return;
 
     try {
       const { error } = await supabase
         .from("transacoes")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("user_id", userId);
 
       if (error) throw error;
-
       await buscar();
     } catch (e) {
       console.error(e);
@@ -146,6 +163,11 @@ export function useTransacoes(userId) {
   };
 
   const adicionarObjetivo = async (novoObj) => {
+    if (!userId) {
+      setErro("Usuário não autenticado.");
+      return false;
+    }
+
     try {
       const { error } = await supabase.from("objetivos").insert([
         {
@@ -159,7 +181,6 @@ export function useTransacoes(userId) {
       ]);
 
       if (error) throw error;
-
       await buscar();
       return true;
     } catch (e) {
@@ -170,6 +191,11 @@ export function useTransacoes(userId) {
   };
 
   const atualizarObjetivo = async (objetivoAtualizado) => {
+    if (!userId) {
+      setErro("Usuário não autenticado.");
+      return false;
+    }
+
     try {
       const { error } = await supabase
         .from("objetivos")
@@ -180,10 +206,10 @@ export function useTransacoes(userId) {
           cor: objetivoAtualizado.cor || "#6C5CE7",
           letra: (objetivoAtualizado.nome || "O").charAt(0).toUpperCase(),
         })
-        .eq("id", objetivoAtualizado.id);
+        .eq("id", objetivoAtualizado.id)
+        .eq("user_id", userId);
 
       if (error) throw error;
-
       await buscar();
       return true;
     } catch (e) {
@@ -194,16 +220,21 @@ export function useTransacoes(userId) {
   };
 
   const deletarObjetivo = async (id) => {
-    if (!window.confirm("Excluir este objetivo?")) return;
+    if (!userId) {
+      setErro("Usuário não autenticado.");
+      return false;
+    }
+
+    if (!window.confirm("Excluir este objetivo?")) return false;
 
     try {
       const { error } = await supabase
         .from("objetivos")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("user_id", userId);
 
       if (error) throw error;
-
       await buscar();
       return true;
     } catch (e) {
@@ -214,19 +245,13 @@ export function useTransacoes(userId) {
   };
 
   const mesAtualStr = new Date().toISOString().slice(0, 7);
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
 
-  const daquiSeteDias = new Date(hoje);
-  daquiSeteDias.setDate(hoje.getDate() + 7);
-
-  const contasUrgentes = transacoes.filter((t) => {
-    if (!t.data_vencimento) return false;
-
-    const dv = new Date(t.data_vencimento + "T12:00:00");
-
-    return t.tipo === "saida" && !t.pago && dv <= daquiSeteDias;
-  });
+  const contasUrgentes = transacoes
+    .filter((t) => t.tipo === "saida" && !t.pago)
+    .sort((a, b) =>
+      (a.data_vencimento || "").localeCompare(b.data_vencimento || "")
+    )
+    .slice(0, 3);
 
   const transacoesMes = transacoes.filter((t) =>
     t.data_vencimento?.startsWith(mesAtualStr)
