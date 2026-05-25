@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { getCat } from "../../constants/categorias";
+import ConfirmModal from "../ConfirmModal/ConfirmModal";
 
-const Icon = ({ path, size = 18 }) => (
+const IconSVG = ({ path, size = 18 }) => (
   <svg
     width={size}
     height={size}
@@ -16,9 +17,8 @@ const Icon = ({ path, size = 18 }) => (
   </svg>
 );
 
-const DEL_PATH =
-  "M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2";
-
+const SEARCH_PATH = "M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z";
+const DEL_PATH = "M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2";
 const CHECK_PATH = "M20 6L9 17l-5-5";
 
 const formatDate = (str) =>
@@ -35,97 +35,182 @@ export default function History({
   mesAtualStr,
   loading,
   onTogglePago,
-  onDeletar,
+  confirmandoId,
+  pedirConfirmacaoTransacao,
+  cancelarConfirmacaoTransacao,
+  confirmarDeletarTransacao,
 }) {
   const [filtro, setFiltro] = useState("mes");
+  const [buscando, setBuscando] = useState(false);
+  const [busca, setBusca] = useState("");
 
-  const tExibidas =
-    filtro === "todas"
-      ? transacoes
-      : transacoes.filter((t) => t.data_vencimento?.startsWith(mesAtualStr));
+  const tFiltradas = useMemo(() => {
+    let lista =
+      filtro === "todas"
+        ? transacoes
+        : transacoes.filter((t) => t.data_vencimento?.startsWith(mesAtualStr));
+
+    if (busca.trim()) {
+      const q = busca.trim().toLowerCase();
+      lista = lista.filter(
+        (t) =>
+          t.descricao?.toLowerCase().includes(q) ||
+          t.categoria?.toLowerCase().includes(q)
+      );
+    }
+
+    return lista;
+  }, [transacoes, filtro, mesAtualStr, busca]);
+
+  const totais = useMemo(
+    () => ({
+      entradas: tFiltradas
+        .filter((t) => t.tipo === "entrada")
+        .reduce((s, t) => s + Number(t.valor || 0), 0),
+      saidas: tFiltradas
+        .filter((t) => t.tipo === "saida")
+        .reduce((s, t) => s + Number(t.valor || 0), 0),
+      pagas: tFiltradas.filter((t) => t.tipo === "saida" && t.pago).length,
+      abertas: tFiltradas.filter((t) => t.tipo === "saida" && !t.pago).length,
+    }),
+    [tFiltradas]
+  );
+
+  const transacaoPendente = confirmandoId
+    ? transacoes.find((t) => t.id === confirmandoId)
+    : null;
 
   return (
     <section className="history-section">
       <div className="history-toolbar">
         <h3>Histórico</h3>
 
-        <div className="chips">
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <button
             type="button"
-            className={filtro === "mes" ? "active" : ""}
-            onClick={() => setFiltro("mes")}
-            aria-pressed={filtro === "mes"}
+            className="goal-btn"
+            aria-label={buscando ? "Fechar busca" : "Buscar transação"}
+            onClick={() => {
+              setBuscando((v) => !v);
+              setBusca("");
+            }}
           >
-            Mês
+            <IconSVG path={SEARCH_PATH} size={15} />
           </button>
 
-          <button
-            type="button"
-            className={filtro === "todas" ? "active" : ""}
-            onClick={() => setFiltro("todas")}
-            aria-pressed={filtro === "todas"}
-          >
-            Tudo
-          </button>
+          <div className="chips">
+            <button
+              type="button"
+              className={filtro === "mes" ? "active" : ""}
+              onClick={() => setFiltro("mes")}
+              aria-pressed={filtro === "mes"}
+            >
+              Mês
+            </button>
+            <button
+              type="button"
+              className={filtro === "todas" ? "active" : ""}
+              onClick={() => setFiltro("todas")}
+              aria-pressed={filtro === "todas"}
+            >
+              Tudo
+            </button>
+          </div>
         </div>
       </div>
 
-      {loading && <div className="feed-card">Carregando...</div>}
+      {buscando && (
+        <div style={{ margin: "10px 0" }}>
+          <input
+            type="text"
+            placeholder="Buscar por descrição ou categoria..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            autoFocus
+            className="busca-input"
+          />
+        </div>
+      )}
+
+      {tFiltradas.length > 0 && (
+        <div className="history-mini-summary">
+          <span style={{ color: "#b9ffe9" }}>+{money(totais.entradas)}</span>
+          <span style={{ color: "#ffb0b0" }}>-{money(totais.saidas)}</span>
+          <span style={{ color: "#9aa3b8" }}>
+            {totais.abertas} em aberto · {totais.pagas} pagas
+          </span>
+        </div>
+      )}
+
+      {loading && (
+        <div className="feed-skeleton">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-row" />
+          ))}
+        </div>
+      )}
 
       {!loading &&
-        tExibidas.map((t) => {
+        tFiltradas.map((t) => {
           const c = getCat(t.categoria);
           const isEntrada = t.tipo === "entrada";
 
           return (
             <article
               key={t.id}
-              className={`feed-card ${isEntrada ? "is-entrada" : "is-saida"}`}
+              className={`feed-card ${isEntrada ? "is-entrada" : "is-saida"} ${
+                t.pago ? "is-pago" : ""
+              }`}
             >
               <div
                 className="feed-icon"
-                style={{ background: c.cor || "#999" }}
+                style={{ background: c.cor || "#555", color: "#fff", fontWeight: 700 }}
               >
-                {c.label?.[0] || "$"}
+                {(c.label || t.categoria || "?").charAt(0).toUpperCase()}
               </div>
 
               <div className="feed-info">
                 <strong>{t.descricao}</strong>
 
                 <div className="feed-meta">
-                  {formatDate(t.data_vencimento)}
+                  <span>{formatDate(t.data_vencimento)}</span>
+
                   {t.total_parcelas > 1 && (
                     <span className="parcela-badge">
-                      {t.num_parcela}/{t.total_parcelas}
+                      {t.num_parcela}/{t.total_parcelas}x
                     </span>
                   )}
+
+                  {t.pago && <span className="pago-badge">Pago</span>}
+
+                  <span style={{ color: c.cor, opacity: 0.9 }}>{c.label}</span>
                 </div>
               </div>
 
               <div className="feed-right">
                 <strong className={`feed-price ${isEntrada ? "price-entrada" : ""}`}>
-                  {isEntrada ? "+" : "-"} {money(t.valor)}
+                  {isEntrada ? "+" : "-"}{money(t.valor)}
                 </strong>
 
                 <div className="feed-btns">
                   {!isEntrada && (
                     <button
                       type="button"
-                      className="pay-check"
+                      className={`pay-check ${t.pago ? "pay-check-done" : ""}`}
                       onClick={() => onTogglePago(t)}
-                      aria-label={t.pago ? "Marcar como não pago" : "Marcar como pago"}
+                      aria-label={t.pago ? "Desfazer pagamento" : "Marcar como pago"}
                     >
-                      {t.pago ? <Icon path={CHECK_PATH} size={14} /> : "Pagar"}
+                      {t.pago ? <IconSVG path={CHECK_PATH} size={14} /> : "Pagar"}
                     </button>
                   )}
 
                   <button
                     type="button"
                     className="del-btn"
-                    onClick={() => onDeletar(t.id)}
+                    onClick={() => pedirConfirmacaoTransacao(t.id)}
                     aria-label={`Excluir ${t.descricao}`}
                   >
-                    <Icon path={DEL_PATH} size={14} />
+                    <IconSVG path={DEL_PATH} size={14} />
                   </button>
                 </div>
               </div>
@@ -133,8 +218,41 @@ export default function History({
           );
         })}
 
-      {!loading && tExibidas.length === 0 && (
-        <div className="feed-card">Nenhuma transação encontrada.</div>
+      {!loading && tFiltradas.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 17H5a2 2 0 01-2-2V5a2 2 0 012-2h11l4 4v10a2 2 0 01-2 2h-4" />
+              <polyline points="9 17 9 13 15 13 15 17" />
+            </svg>
+          </div>
+          <h4>Nenhuma transação</h4>
+          <p>
+            {busca
+              ? `Nenhum resultado para "${busca}".`
+              : "Registre sua primeira transação acima."}
+          </p>
+        </div>
+      )}
+
+      {transacaoPendente && (
+        <ConfirmModal
+          titulo="Excluir transação"
+          mensagem={`Deseja excluir "${transacaoPendente.descricao}"? Esta ação não pode ser desfeita.`}
+          labelConfirmar="Excluir"
+          perigoso
+          onConfirm={confirmarDeletarTransacao}
+          onClose={cancelarConfirmacaoTransacao}
+        />
       )}
     </section>
   );

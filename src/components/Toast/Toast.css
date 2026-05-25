@@ -1,0 +1,113 @@
+.toast-viewport {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 36px 1fr 28px;
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(25, 31, 43, 0.98) 0%, rgba(17, 21, 30, 0.98) 100%);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+  color: #f7f8fb;
+  animation: toastIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-success {
+  border-color: rgba(92, 214, 163, 0.22);
+}
+
+.toast-error {
+  border-color: rgba(255, 107, 107, 0.22);
+}
+
+.toast-warning {
+  border-color: rgba(255, 190, 92, 0.22);
+}
+
+.toast-info {
+  border-color: rgba(123, 97, 255, 0.22);
+}
+
+.toast-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.toast-content {
+  min-width: 0;
+}
+
+.toast-title {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.toast-message {
+  margin: 0;
+  color: #c9d1e3;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.toast-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #9aa3b8;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .toast-viewport {
+    top: auto;
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+
+  .toast {
+    width: 100%;
+  }
+}

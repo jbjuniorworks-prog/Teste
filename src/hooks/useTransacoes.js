@@ -1,11 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 
-export function useTransacoes(userId) {
+export function useTransacoes(userId, notify = () => {}) {
   const [transacoes, setTransacoes] = useState([]);
   const [objetivos, setObjetivos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+
+  const [confirmandoId, setConfirmandoId] = useState(null);
+  const [confirmandoObjetivoId, setConfirmandoObjetivoId] = useState(null);
+
+  const mesAtualStr = useMemo(() => new Date().toISOString().slice(0, 7), []);
 
   const buscar = useCallback(async () => {
     if (!userId) {
@@ -18,25 +23,30 @@ export function useTransacoes(userId) {
     setErro("");
 
     try {
-      const { data: tData, error: tError } = await supabase
-        .from("transacoes")
-        .select("*")
-        .eq("user_id", userId)
-        .order("data_vencimento", { ascending: true });
+      const [
+        { data: tData, error: tError },
+        { data: oData, error: oError },
+      ] = await Promise.all([
+        supabase
+          .from("transacoes")
+          .select("*")
+          .eq("user_id", userId)
+          .order("data_vencimento", { ascending: true }),
+        supabase
+          .from("objetivos")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true }),
+      ]);
 
       if (tError) throw tError;
-      setTransacoes(tData || []);
-
-      const { data: oData, error: oError } = await supabase
-        .from("objetivos")
-        .select("*")
-        .eq("user_id", userId);
-
       if (oError) throw oError;
+
+      setTransacoes(tData || []);
       setObjetivos(oData || []);
     } catch (e) {
-      console.error(e);
-      setErro("Erro ao carregar dados.");
+      console.error("[useTransacoes] buscar:", e.message);
+      setErro("Erro ao carregar dados. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -45,6 +55,42 @@ export function useTransacoes(userId) {
   useEffect(() => {
     buscar();
   }, [buscar]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`financeiro-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transacoes",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          buscar();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "objetivos",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          buscar();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, buscar]);
 
   const adicionarTransacao = async ({
     descricao,
@@ -55,14 +101,14 @@ export function useTransacoes(userId) {
     tipoForm,
   }) => {
     if (!userId) {
-      setErro("UsuÃ¡rio nÃ£o autenticado.");
+      setErro("Usuário não autenticado.");
       return false;
     }
 
     const vLimpo = parseFloat(String(valor).replace(",", "."));
 
     if (Number.isNaN(vLimpo) || vLimpo <= 0) {
-      setErro("Informe um valor vÃ¡lido.");
+      setErro("Informe um valor válido.");
       return false;
     }
 
@@ -84,18 +130,22 @@ export function useTransacoes(userId) {
 
         if (error) throw error;
       } else {
-        const nParc = parseInt(parcelas, 10) || 1;
-        const vCada = vLimpo / nParc;
-        const dBase = new Date(vencimento + "T12:00:00");
+        const nParc = Math.min(Math.max(parseInt(parcelas, 10) || 1, 1), 24);
+        const dBase = new Date(`${vencimento}T12:00:00`);
+        const valorBase = Math.floor((vLimpo / nParc) * 100) / 100;
+        const resto = Number((vLimpo - valorBase * nParc).toFixed(2));
 
         const lista = Array.from({ length: nParc }, (_, i) => {
           const d = new Date(dBase);
           d.setMonth(dBase.getMonth() + i);
 
+          const valorParcela =
+            i === nParc - 1 ? Number((valorBase + resto).toFixed(2)) : valorBase;
+
           return {
             user_id: userId,
             descricao,
-            valor: parseFloat(vCada.toFixed(2)),
+            valor: valorParcela,
             tipo: "saida",
             pago: false,
             categoria: categoriaSel || "outros",
@@ -109,43 +159,78 @@ export function useTransacoes(userId) {
         if (error) throw error;
       }
 
-      await buscar();
+      notify({
+        type: "success",
+        title: "Transação salva",
+        message:
+          tipoForm === "entrada"
+            ? "A entrada foi registrada com sucesso."
+            : "A despesa foi registrada com sucesso.",
+      });
+
       return true;
     } catch (e) {
-      console.error(e);
-      setErro("Erro ao salvar.");
+      console.error("[useTransacoes] adicionarTransacao:", e.message);
+      setErro("Erro ao salvar transação. Tente novamente.");
       return false;
     }
   };
 
-  const togglePago = async (t) => {
+  const togglePago = async (transacao) => {
     if (!userId) {
-      setErro("UsuÃ¡rio nÃ£o autenticado.");
+      setErro("Usuário não autenticado.");
       return;
     }
+
+    setTransacoes((prev) =>
+      prev.map((item) =>
+        item.id === transacao.id ? { ...item, pago: !item.pago } : item
+      )
+    );
 
     try {
       const { error } = await supabase
         .from("transacoes")
-        .update({ pago: !t.pago })
-        .eq("id", t.id)
+        .update({ pago: !transacao.pago })
+        .eq("id", transacao.id)
         .eq("user_id", userId);
 
       if (error) throw error;
-      await buscar();
+
+      notify({
+        type: "success",
+        title: transacao.pago ? "Pagamento desfeito" : "Conta paga",
+        message: transacao.pago
+          ? "A transação voltou para em aberto."
+          : "A transação foi marcada como paga.",
+      });
     } catch (e) {
-      console.error(e);
+      console.error("[useTransacoes] togglePago:", e.message);
       setErro("Erro ao atualizar pagamento.");
+
+      setTransacoes((prev) =>
+        prev.map((item) =>
+          item.id === transacao.id ? { ...item, pago: transacao.pago } : item
+        )
+      );
     }
   };
 
-  const deletarTransacao = async (id) => {
-    if (!userId) {
-      setErro("UsuÃ¡rio nÃ£o autenticado.");
-      return;
-    }
+  const pedirConfirmacaoTransacao = (id) => {
+    setConfirmandoId(id);
+  };
 
-    if (!window.confirm("Deseja excluir este item?")) return;
+  const cancelarConfirmacaoTransacao = () => {
+    setConfirmandoId(null);
+  };
+
+  const confirmarDeletarTransacao = async () => {
+    const id = confirmandoId;
+
+    if (!id || !userId) return false;
+
+    setConfirmandoId(null);
+    setTransacoes((prev) => prev.filter((item) => item.id !== id));
 
     try {
       const { error } = await supabase
@@ -155,16 +240,25 @@ export function useTransacoes(userId) {
         .eq("user_id", userId);
 
       if (error) throw error;
-      await buscar();
+
+      notify({
+        type: "success",
+        title: "Transação excluída",
+        message: "A transação foi removida com sucesso.",
+      });
+
+      return true;
     } catch (e) {
-      console.error(e);
-      setErro("Erro ao excluir transaÃ§Ã£o.");
+      console.error("[useTransacoes] deletarTransacao:", e.message);
+      setErro("Erro ao excluir transação.");
+      await buscar();
+      return false;
     }
   };
 
   const adicionarObjetivo = async (novoObj) => {
     if (!userId) {
-      setErro("UsuÃ¡rio nÃ£o autenticado.");
+      setErro("Usuário não autenticado.");
       return false;
     }
 
@@ -181,18 +275,24 @@ export function useTransacoes(userId) {
       ]);
 
       if (error) throw error;
-      await buscar();
+
+      notify({
+        type: "success",
+        title: "Objetivo criado",
+        message: "Seu novo objetivo foi adicionado.",
+      });
+
       return true;
     } catch (e) {
-      console.error(e);
+      console.error("[useTransacoes] adicionarObjetivo:", e.message);
       setErro("Erro ao criar objetivo.");
       return false;
     }
   };
 
-  const atualizarObjetivo = async (objetivoAtualizado) => {
+  const atualizarObjetivo = async (obj) => {
     if (!userId) {
-      setErro("UsuÃ¡rio nÃ£o autenticado.");
+      setErro("Usuário não autenticado.");
       return false;
     }
 
@@ -200,32 +300,45 @@ export function useTransacoes(userId) {
       const { error } = await supabase
         .from("objetivos")
         .update({
-          nome: objetivoAtualizado.nome,
-          meta: Number(objetivoAtualizado.meta || 0),
-          atual: Number(objetivoAtualizado.atual || 0),
-          cor: objetivoAtualizado.cor || "#6C5CE7",
-          letra: (objetivoAtualizado.nome || "O").charAt(0).toUpperCase(),
+          nome: obj.nome,
+          meta: Number(obj.meta || 0),
+          atual: Number(obj.atual || 0),
+          cor: obj.cor || "#6C5CE7",
+          letra: (obj.nome || "O").charAt(0).toUpperCase(),
         })
-        .eq("id", objetivoAtualizado.id)
+        .eq("id", obj.id)
         .eq("user_id", userId);
 
       if (error) throw error;
-      await buscar();
+
+      notify({
+        type: "success",
+        title: "Objetivo atualizado",
+        message: "As alterações foram salvas.",
+      });
+
       return true;
     } catch (e) {
-      console.error(e);
+      console.error("[useTransacoes] atualizarObjetivo:", e.message);
       setErro("Erro ao atualizar objetivo.");
       return false;
     }
   };
 
-  const deletarObjetivo = async (id) => {
-    if (!userId) {
-      setErro("UsuÃ¡rio nÃ£o autenticado.");
-      return false;
-    }
+  const pedirConfirmacaoObjetivo = (id) => {
+    setConfirmandoObjetivoId(id);
+  };
 
-    if (!window.confirm("Excluir este objetivo?")) return false;
+  const cancelarConfirmacaoObjetivo = () => {
+    setConfirmandoObjetivoId(null);
+  };
+
+  const confirmarDeletarObjetivo = async () => {
+    const id = confirmandoObjetivoId;
+
+    if (!id || !userId) return false;
+
+    setConfirmandoObjetivoId(null);
 
     try {
       const { error } = await supabase
@@ -235,36 +348,35 @@ export function useTransacoes(userId) {
         .eq("user_id", userId);
 
       if (error) throw error;
-      await buscar();
+
+      notify({
+        type: "success",
+        title: "Objetivo excluído",
+        message: "O objetivo foi removido com sucesso.",
+      });
+
       return true;
     } catch (e) {
-      console.error(e);
+      console.error("[useTransacoes] deletarObjetivo:", e.message);
       setErro("Erro ao excluir objetivo.");
+      await buscar();
       return false;
     }
   };
 
-  const mesAtualStr = new Date().toISOString().slice(0, 7);
+  const totais = useCallback((lista) => {
+    return lista.reduce(
+      (acc, item) => {
+        const valor = Number(item.valor || 0);
 
-  const contasUrgentes = transacoes
-    .filter((t) => t.tipo === "saida" && !t.pago)
-    .sort((a, b) =>
-      (a.data_vencimento || "").localeCompare(b.data_vencimento || "")
-    )
-    .slice(0, 3);
+        if (item.tipo === "entrada") acc.ganhos += valor;
+        if (item.tipo === "saida") acc.despesas += valor;
 
-  const transacoesMes = transacoes.filter((t) =>
-    t.data_vencimento?.startsWith(mesAtualStr)
-  );
-
-  const totais = (lista) => ({
-    ganhos: lista
-      .filter((t) => t.tipo === "entrada")
-      .reduce((s, t) => s + (t.valor || 0), 0),
-    despesas: lista
-      .filter((t) => t.tipo === "saida")
-      .reduce((s, t) => s + (t.valor || 0), 0),
-  });
+        return acc;
+      },
+      { ganhos: 0, despesas: 0 }
+    );
+  }, []);
 
   return {
     transacoes,
@@ -273,14 +385,18 @@ export function useTransacoes(userId) {
     erro,
     setErro,
     mesAtualStr,
-    contasUrgentes,
-    transacoesMes,
     totais,
     adicionarTransacao,
     togglePago,
-    deletarTransacao,
+    confirmandoId,
+    pedirConfirmacaoTransacao,
+    cancelarConfirmacaoTransacao,
+    confirmarDeletarTransacao,
     adicionarObjetivo,
     atualizarObjetivo,
-    deletarObjetivo,
+    confirmandoObjetivoId,
+    pedirConfirmacaoObjetivo,
+    cancelarConfirmacaoObjetivo,
+    confirmarDeletarObjetivo,
   };
 }

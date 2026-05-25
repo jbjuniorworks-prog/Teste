@@ -1,34 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { CATEGORIAS } from "../../constants/categorias";
 
-const Icon = ({ label, size = 20 }) => (
-  <span
-    aria-hidden="true"
-    style={{
-      width: size,
-      height: size,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: size - 2,
-      lineHeight: 1,
-      flexShrink: 0,
-    }}
-  >
-    {label?.[0]?.toUpperCase() || "•"}
-  </span>
-);
-
 export default function TransactionForm({ onSubmit, erro, setErro }) {
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [parcelas, setParcelas] = useState(1);
-  const [vencimento, setVencimento] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [vencimento, setVencimento] = useState(new Date().toISOString().split("T")[0]);
   const [categoriaSel, setCategoriaSel] = useState("outros");
   const [tipoForm, setTipoForm] = useState("saida");
   const [salvando, setSalvando] = useState(false);
+  const [sucesso, setSucesso] = useState(false);
 
   const valorNumerico = useMemo(() => {
     const limpo = String(valor).replace(",", ".").trim();
@@ -39,39 +20,9 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
     if (erro) setErro("");
   };
 
-  const handleDescricaoChange = (e) => {
-    setDescricao(e.target.value);
-    limparErro();
-  };
-
-  const handleValorChange = (e) => {
-    setValor(e.target.value);
-    limparErro();
-  };
-
-  const handleParcelasChange = (e) => {
-    setParcelas(e.target.value);
-    limparErro();
-  };
-
-  const handleVencimentoChange = (e) => {
-    setVencimento(e.target.value);
-    limparErro();
-  };
-
-  const handleCategoriaChange = (categoria) => {
-    setCategoriaSel(categoria);
-    limparErro();
-  };
-
-  const handleTipoChange = (tipo) => {
-    setTipoForm(tipo);
-    limparErro();
-  };
-
   const validarFormulario = () => {
     if (!descricao.trim()) {
-      setErro("Digite uma descrição.");
+      setErro("Informe uma descrição.");
       return false;
     }
 
@@ -81,14 +32,14 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
     }
 
     if (!vencimento) {
-      setErro("Escolha uma data.");
+      setErro("Selecione uma data.");
       return false;
     }
 
     if (tipoForm === "saida") {
-      const totalParcelas = Number(parcelas);
-      if (!totalParcelas || totalParcelas < 1 || totalParcelas > 24) {
-        setErro("As parcelas devem estar entre 1 e 24.");
+      const n = Number(parcelas);
+      if (!n || n < 1 || n > 24) {
+        setErro("O número de parcelas deve estar entre 1 e 24.");
         return false;
       }
     }
@@ -99,7 +50,6 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validarFormulario()) return;
 
     setSalvando(true);
@@ -116,6 +66,8 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
     setSalvando(false);
 
     if (ok) {
+      setSucesso(true);
+      setTimeout(() => setSucesso(false), 2500);
       setDescricao("");
       setValor("");
       setParcelas(1);
@@ -128,27 +80,43 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
 
   return (
     <>
-      <section className="quick-actions-carousel">
-        {Object.entries(CATEGORIAS).map(([key, cat]) => (
-          <button
-            key={key}
-            type="button"
-            className={`cat-btn ${categoriaSel === key ? "cat-active" : ""}`}
-            onClick={() => handleCategoriaChange(key)}
-            aria-pressed={categoriaSel === key}
-          >
-            <Icon label={cat.label} size={18} />
-            <span>{cat.label}</span>
-          </button>
-        ))}
+      <section className="quick-actions-wrap">
+        <div className="quick-actions-head">
+          <h3>Categorias</h3>
+          <small>Deslize para ver mais</small>
+        </div>
+
+        <div className="quick-actions-carousel" aria-label="Selecionar categoria">
+          {Object.entries(CATEGORIAS).map(([key, cat]) => (
+            <button
+              key={key}
+              type="button"
+              className={`cat-btn ${categoriaSel === key ? "cat-active" : ""}`}
+              onClick={() => {
+                setCategoriaSel(key);
+                limparErro();
+              }}
+              aria-pressed={categoriaSel === key}
+              title={cat.label}
+            >
+              <span className="cat-initial" aria-hidden="true">
+                {(cat.label || key).charAt(0).toUpperCase()}
+              </span>
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       <form className="glass-form" onSubmit={handleSubmit} noValidate>
-        <div className="tipo-toggle">
+        <div className="tipo-toggle" role="group" aria-label="Tipo de transação">
           <button
             type="button"
             className={`tipo-btn ${tipoForm === "saida" ? "active-saida" : ""}`}
-            onClick={() => handleTipoChange("saida")}
+            onClick={() => {
+              setTipoForm("saida");
+              limparErro();
+            }}
             aria-pressed={tipoForm === "saida"}
           >
             Despesa
@@ -157,7 +125,10 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
           <button
             type="button"
             className={`tipo-btn ${tipoForm === "entrada" ? "active-entrada" : ""}`}
-            onClick={() => handleTipoChange("entrada")}
+            onClick={() => {
+              setTipoForm("entrada");
+              limparErro();
+            }}
             aria-pressed={tipoForm === "entrada"}
           >
             Receita
@@ -165,17 +136,20 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
         </div>
 
         <div style={{ marginTop: "14px" }}>
+          <label htmlFor="tf-descricao">
+            {tipoForm === "entrada" ? "Origem da receita" : "Descrição da despesa"}
+          </label>
           <input
+            id="tf-descricao"
             type="text"
-            placeholder={
-              tipoForm === "entrada"
-                ? "Origem da receita?"
-                : "O que você comprou?"
-            }
+            placeholder={tipoForm === "entrada" ? "Ex: Salário, Freelance" : "Ex: Mercado, energia, internet"}
             value={descricao}
-            onChange={handleDescricaoChange}
-            aria-label="Descrição da transação"
+            onChange={(e) => {
+              setDescricao(e.target.value);
+              limparErro();
+            }}
             aria-invalid={!!erro && !descricao.trim()}
+            autoComplete="off"
           />
         </div>
 
@@ -188,40 +162,49 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
           }}
         >
           <div>
-            <label htmlFor="valor">Valor</label>
+            <label htmlFor="tf-valor">Valor</label>
             <input
-              id="valor"
+              id="tf-valor"
               type="number"
               step="0.01"
               min="0"
               inputMode="decimal"
               placeholder="0,00"
               value={valor}
-              onChange={handleValorChange}
-              aria-invalid={!!erro && (!!valor ? valorNumerico <= 0 : true)}
+              onChange={(e) => {
+                setValor(e.target.value);
+                limparErro();
+              }}
+              aria-invalid={!!erro && valorNumerico <= 0}
             />
           </div>
 
           <div>
-            <label htmlFor="vencimento">Data</label>
+            <label htmlFor="tf-vencimento">Data</label>
             <input
-              id="vencimento"
+              id="tf-vencimento"
               type="date"
               value={vencimento}
-              onChange={handleVencimentoChange}
+              onChange={(e) => {
+                setVencimento(e.target.value);
+                limparErro();
+              }}
             />
           </div>
 
           {tipoForm === "saida" && (
             <div>
-              <label htmlFor="parcelas">Parc.</label>
+              <label htmlFor="tf-parcelas">Parc.</label>
               <input
-                id="parcelas"
+                id="tf-parcelas"
                 type="number"
                 min="1"
                 max="24"
                 value={parcelas}
-                onChange={handleParcelasChange}
+                onChange={(e) => {
+                  setParcelas(e.target.value);
+                  limparErro();
+                }}
               />
             </div>
           )}
@@ -233,16 +216,14 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
           </div>
         )}
 
-        <button
-          type="submit"
-          className="submit-main"
-          disabled={salvando}
-        >
-          {salvando
-            ? "Salvando..."
-            : tipoForm === "entrada"
-            ? "Salvar Receita"
-            : "Salvar Despesa"}
+        {sucesso && (
+          <div className="form-sucesso" role="status">
+            {tipoForm === "entrada" ? "Receita registrada com sucesso." : "Despesa registrada com sucesso."}
+          </div>
+        )}
+
+        <button type="submit" className="submit-main" disabled={salvando}>
+          {salvando ? "Salvando..." : tipoForm === "entrada" ? "Salvar receita" : "Salvar despesa"}
         </button>
       </form>
     </>

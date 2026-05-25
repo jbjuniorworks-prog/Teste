@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import GoalModal from "../GoalModal/GoalModal";
+import ConfirmModal from "../ConfirmModal/ConfirmModal";
 
 const formatMoney = (value) =>
   Number(value || 0).toLocaleString("pt-BR", {
@@ -14,51 +15,103 @@ export default function Header({
   objetivos = [],
   onAddGoal,
   onEditGoal,
-  onDeleteGoal,
+  onAskDeleteGoal,
+  confirmandoObjetivoId,
+  cancelarConfirmacaoObjetivo,
+  confirmarDeletarObjetivo,
   onLogout,
 }) {
-  const saldo = ganhos - despesas;
-  const objetivo = objetivos?.[0] || null;
   const [modalAberto, setModalAberto] = useState(false);
   const [modalTipo, setModalTipo] = useState("novo");
 
-  const progresso = objetivo
-    ? Math.min((Number(objetivo.atual || 0) / Number(objetivo.meta || 1)) * 100, 100)
-    : 0;
+  const saldo = Number(ganhos || 0) - Number(despesas || 0);
+  const saldoNegativo = saldo < 0;
+  const objetivo = objetivos?.[0] || null;
 
-  const abrirModalNovo    = () => { setModalTipo("novo");    setModalAberto(true); };
-  const abrirModalEditar  = () => { setModalTipo("editar");  setModalAberto(true); };
-  const abrirModalGuardar = () => { setModalTipo("guardar"); setModalAberto(true); };
+  const progresso = useMemo(() => {
+    if (!objetivo) return 0;
 
-  const handleModalConfirm = (dados) => {
-    if (modalTipo === "novo") {
-      onAddGoal({ nome: dados.nome, meta: dados.meta, atual: 0, cor: "#6C5CE7" });
-    } else if (modalTipo === "editar") {
-      onEditGoal({ ...objetivo, nome: dados.nome, meta: dados.meta });
-    } else if (modalTipo === "guardar") {
-      onEditGoal({ ...objetivo, atual: Number(objetivo.atual || 0) + Number(dados.valor) });
-    }
+    const atual = Number(objetivo.atual || 0);
+    const meta = Number(objetivo.meta || 0);
+
+    if (meta <= 0) return 0;
+
+    return Math.min((atual / meta) * 100, 100);
+  }, [objetivo]);
+
+  const objetivoPendente =
+    confirmandoObjetivoId && objetivo?.id === confirmandoObjetivoId
+      ? objetivo
+      : null;
+
+  const nomeUsuario = user?.email ? user.email.split("@")[0] : "usuário";
+  const inicialUsuario = (user?.email?.[0] || "U").toUpperCase();
+
+  const abrirModal = (tipo) => {
+    if (tipo === "novo" && objetivo) return;
+    setModalTipo(tipo);
+    setModalAberto(true);
+  };
+
+  const fecharModal = () => {
     setModalAberto(false);
   };
 
-  const excluirObjetivo = () => {
-    if (!objetivo || !onDeleteGoal) return;
-    onDeleteGoal(objetivo.id);
+  const handleModalConfirm = async (dados) => {
+    if (modalTipo === "novo") {
+      await onAddGoal?.({
+        nome: dados.nome,
+        meta: dados.meta,
+        atual: 0,
+        cor: objetivo?.cor || "#6C5CE7",
+      });
+      fecharModal();
+      return;
+    }
+
+    if (modalTipo === "editar" && objetivo) {
+      await onEditGoal?.({
+        ...objetivo,
+        nome: dados.nome,
+        meta: dados.meta,
+      });
+      fecharModal();
+      return;
+    }
+
+    if (modalTipo === "guardar" && objetivo) {
+      await onEditGoal?.({
+        ...objetivo,
+        atual: Number(objetivo.atual || 0) + Number(dados.valor || 0),
+      });
+      fecharModal();
+    }
   };
 
-  const saldoNegativo = saldo < 0;
+  const pedirExclusaoObjetivo = () => {
+    if (!objetivo || !onAskDeleteGoal) return;
+    onAskDeleteGoal(objetivo.id);
+  };
+
+  const handleGoalEmptyKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      abrirModal("novo");
+    }
+  };
 
   return (
     <>
       <header className="premium-header">
         <div className="top-nav">
           <div className="user-profile">
-            <div className="avatar-l">
-              {(user?.email?.[0] || "U").toUpperCase()}
+            <div className="avatar-l" aria-hidden="true">
+              {inicialUsuario}
             </div>
+
             <div>
               <span>Bem-vindo,</span>
-              <strong>{user?.email ? user.email.split("@")[0] : "usuário"}</strong>
+              <strong>{nomeUsuario}</strong>
             </div>
           </div>
 
@@ -74,9 +127,15 @@ export default function Header({
 
         <section className="main-wallet-card">
           <div className="wallet-label">Saldo total</div>
-          <h2 className={saldoNegativo ? "saldo-negativo" : ""}>{formatMoney(saldo)}</h2>
+
+          <h2 className={saldoNegativo ? "saldo-negativo" : ""}>
+            {formatMoney(saldo)}
+          </h2>
+
           {saldoNegativo && (
-            <p className="saldo-alerta">⚠️ Suas despesas estão maiores que as receitas</p>
+            <p className="saldo-alerta">
+              Suas despesas estão maiores que as receitas.
+            </p>
           )}
 
           <div className="wallet-footer">
@@ -84,6 +143,7 @@ export default function Header({
               <div className="wallet-label">Receitas</div>
               <div className="valor-entrada">{formatMoney(ganhos)}</div>
             </div>
+
             <div className="wallet-stat">
               <div className="wallet-label">Despesas</div>
               <div className="valor-saida">{formatMoney(despesas)}</div>
@@ -94,54 +154,91 @@ export default function Header({
         <section className="section-goals">
           <div className="section-header">
             <h3>Objetivos</h3>
-            <button type="button" className="goal-btn" onClick={abrirModalNovo}>
-              + Novo
-            </button>
+
+            {!objetivo && (
+              <button
+                type="button"
+                className="goal-btn"
+                onClick={() => abrirModal("novo")}
+              >
+                Novo
+              </button>
+            )}
           </div>
 
           {!objetivo ? (
             <article
               className="goal-item goal-vazio"
-              onClick={abrirModalNovo}
+              onClick={() => abrirModal("novo")}
+              onKeyDown={handleGoalEmptyKeyDown}
               role="button"
               tabIndex={0}
+              aria-label="Criar novo objetivo"
             >
-              <p>✦ Toque para criar seu primeiro objetivo</p>
+              <p>Crie seu primeiro objetivo para acompanhar uma meta financeira.</p>
             </article>
           ) : (
             <article className="goal-item">
               <div className="goal-top">
                 <div className="goal-meta">
-                  <div className="goal-letra" style={{ background: objetivo.cor || "#6C5CE7" }}>
+                  <div
+                    className="goal-letra"
+                    style={{ background: objetivo.cor || "#6C5CE7" }}
+                    aria-hidden="true"
+                  >
                     {(objetivo.nome?.[0] || "O").toUpperCase()}
                   </div>
+
                   <div>
                     <strong>{objetivo.nome}</strong>
-                    <p>{formatMoney(objetivo.atual)} de {formatMoney(objetivo.meta)}</p>
+                    <p>
+                      {formatMoney(objetivo.atual)} de {formatMoney(objetivo.meta)}
+                    </p>
                   </div>
                 </div>
+
                 <strong className="goal-pct">{progresso.toFixed(0)}%</strong>
               </div>
 
-              <div className="goal-progress-bg">
+              <div
+                className="goal-progress-bg"
+                aria-label={`Progresso do objetivo: ${progresso.toFixed(0)}%`}
+              >
                 <div
                   className="goal-progress-fill"
-                  style={{ width: `${progresso}%`, background: objetivo.cor || "#6C5CE7" }}
+                  style={{
+                    width: `${progresso}%`,
+                    background: objetivo.cor || "#6C5CE7",
+                  }}
                 />
               </div>
 
               {progresso >= 100 && (
-                <p className="goal-concluido">🎉 Objetivo concluído!</p>
+                <p className="goal-concluido">Meta concluída.</p>
               )}
 
               <div className="goal-actions">
-                <button type="button" className="goal-btn" onClick={abrirModalGuardar}>
-                  Guardar valor
+                <button
+                  type="button"
+                  className="goal-btn"
+                  onClick={() => abrirModal("guardar")}
+                >
+                  Adicionar valor
                 </button>
-                <button type="button" className="goal-btn" onClick={abrirModalEditar}>
+
+                <button
+                  type="button"
+                  className="goal-btn"
+                  onClick={() => abrirModal("editar")}
+                >
                   Editar
                 </button>
-                <button type="button" className="goal-btn goal-btn-danger" onClick={excluirObjetivo}>
+
+                <button
+                  type="button"
+                  className="goal-btn goal-btn-danger"
+                  onClick={pedirExclusaoObjetivo}
+                >
                   Excluir
                 </button>
               </div>
@@ -155,7 +252,18 @@ export default function Header({
           tipo={modalTipo}
           objetivo={objetivo}
           onConfirm={handleModalConfirm}
-          onClose={() => setModalAberto(false)}
+          onClose={fecharModal}
+        />
+      )}
+
+      {objetivoPendente && (
+        <ConfirmModal
+          titulo="Excluir objetivo"
+          mensagem={`Deseja excluir "${objetivoPendente.nome}"? Esta ação não pode ser desfeita.`}
+          labelConfirmar="Excluir"
+          perigoso
+          onConfirm={confirmarDeletarObjetivo}
+          onClose={cancelarConfirmacaoObjetivo}
         />
       )}
     </>
