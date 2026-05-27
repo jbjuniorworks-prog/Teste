@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { supabase } from "./supabaseClient";
 import { useTransacoes } from "./hooks/useTransacoes";
@@ -15,6 +15,7 @@ function AppContent({ session, handleLogout }) {
   const { showToast } = useToast();
   const user = session?.user || null;
   const userId = user?.id || null;
+  const avisoUrgenteEnviado = useRef(false);
 
   const notify = (payload) => showToast(payload);
 
@@ -62,6 +63,64 @@ function AppContent({ session, handleLogout }) {
       currency: "BRL",
     });
 
+  const avisosUrgentes = useMemo(() => {
+    const hoje = new Date();
+    hoje.setHours(12, 0, 0, 0);
+
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1);
+
+    return transacoesMes.filter((t) => {
+      if (t.tipo !== "saida" || t.pago || !t.data_vencimento) return false;
+
+      const venc = new Date(`${t.data_vencimento}T12:00:00`);
+      return venc <= amanha;
+    });
+  }, [transacoesMes]);
+
+  useEffect(() => {
+    if (avisoUrgenteEnviado.current) return;
+    if (!avisosUrgentes.length) return;
+
+    const hoje = new Date();
+    hoje.setHours(12, 0, 0, 0);
+
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1);
+
+    const vencidas = avisosUrgentes.filter((t) => {
+      const venc = new Date(`${t.data_vencimento}T12:00:00`);
+      return venc < hoje;
+    });
+
+    const proximas = avisosUrgentes.filter((t) => {
+      const venc = new Date(`${t.data_vencimento}T12:00:00`);
+      return venc >= hoje && venc <= amanha;
+    });
+
+    const timeoutId = setTimeout(() => {
+      if (vencidas.length) {
+        showToast({
+          type: "warning",
+          title: "Contas vencidas",
+          message: `${vencidas.length} conta(s) estão vencidas e precisam de atenção.`,
+          duration: 4500,
+        });
+      } else if (proximas.length) {
+        showToast({
+          type: "info",
+          title: "Vencem em breve",
+          message: `${proximas.length} conta(s) vencem hoje ou amanhã.`,
+          duration: 4500,
+        });
+      }
+
+      avisoUrgenteEnviado.current = true;
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [avisosUrgentes, showToast]);
+
   return (
     <div className="app-dark-mode">
       <div className="phone-container">
@@ -81,7 +140,7 @@ function AppContent({ session, handleLogout }) {
 
         <section className="quick-summary">
           <div className="summary-head">
-            <h3>Vis�o r�pida</h3>
+            <h3>Visão rápida</h3>
             <small>Hoje</small>
           </div>
 
@@ -92,7 +151,7 @@ function AppContent({ session, handleLogout }) {
             </article>
 
             <article className="summary-card">
-              <p>Transa��es</p>
+              <p>Transações</p>
               <strong>{transacoes.length}</strong>
             </article>
 
