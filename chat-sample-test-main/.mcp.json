@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "chat-sample": {
+      "type": "http",
+      "url": "http://127.0.0.1:9000/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CHAT_SAMPLE_PAT}"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--browser",
+        "chrome",
+        "--headless",
+        "--no-sandbox"
+      ]
+    }
+  }
+}

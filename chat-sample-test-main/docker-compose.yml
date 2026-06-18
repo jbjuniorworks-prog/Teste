@@ -1,0 +1,115 @@
+name: chat-sample
+
+services:
+  postgres:
+    container_name: chat-sample_postgres
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: chat-sample_redis
+    image: redis:8
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    container_name: chat-sample_api
+    build: ./apps/api
+    restart: unless-stopped
+    # Loads the API config; overrides the hosts to use compose service DNS.
+    env_file:
+      - ./apps/api/.env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      MCP_URL: http://mcp:9000/mcp
+    ports:
+      - "8000:8000"
+    volumes:
+      - documents_data:/data/documents   # generated PDFs (WeasyPrint)
+      - uploads_data:/data/uploads       # PDFs uploaded by the user (extraction)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "uv", "run", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mcp:
+    container_name: chat-sample_mcp
+    build: ./apps/mcp
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:8000   # MCP pass-through -> API via service DNS
+      MCP_HOST: 0.0.0.0          # bind reachable from other containers
+      MCP_PORT: "9000"
+    ports:
+      - "9000:9000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  worker:
+    container_name: chat-sample_worker
+    build: ./apps/api               # same image as the API, different entrypoint
+    restart: unless-stopped
+    command: uv run python -m app.worker
+    env_file:
+      - ./apps/api/.env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      MCP_URL: http://mcp:9000/mcp   # the agent runs here -> talks to the MCP
+      PYTHONUNBUFFERED: "1"           # worker logs in real time
+      XAUTOCLAIM_MIN_IDLE_MS: "15000" # >= lease TTL (heartbeat) to avoid churn
+      IDEMPOTENCY_REAPER_INTERVAL_SECONDS: "20"  # dev: reaper runs more often
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      mcp:
+        condition: service_started
+
+  web:
+    container_name: chat-sample_web
+    build: ./apps/web
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:8000   # BFF (server-side) -> API via service DNS
+      NODE_ENV: development       # session cookie without Secure (http in dev)
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  documents_data:
+  uploads_data:

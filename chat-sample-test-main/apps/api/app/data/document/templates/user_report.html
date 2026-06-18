@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm 1.8cm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 9px;
+          color: #9ca3af;
+        }
+      }
+      body {
+        font-family: "DejaVu Sans", sans-serif;
+        color: #1f2937;
+        font-size: 11px;
+      }
+      header {
+        border-bottom: 2px solid #1e3a5f;
+        padding-bottom: 10px;
+        margin-bottom: 4px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 2px;
+        color: #1e3a5f;
+      }
+      .meta {
+        margin: 0;
+        font-size: 10px;
+        color: #6b7280;
+      }
+      .count {
+        margin: 14px 0 8px;
+        font-size: 11px;
+        color: #374151;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 7px 8px;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: top;
+      }
+      th {
+        background: #f3f4f6;
+        font-size: 9.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #374151;
+      }
+      tr {
+        break-inside: avoid;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>{{ data.title }}</h1>
+      <p class="meta">Generated at {{ data.generated_at }}</p>
+    </header>
+
+    <p class="count">{{ data.users | length }} user(s)</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in data.users %}
+        <tr>
+          <td>{{ u.name }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.role }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </body>
+</html>
