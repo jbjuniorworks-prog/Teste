@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { getCat } from "../../constants/categorias";
-import ConfirmModal from "../ConfirmModal/ConfirmModal";
+import { getCat } from "../../../../constants/categorias";
+import ConfirmModal from "../../../../components/shared/ConfirmModal/ConfirmModal";
 
 const IconSVG = ({ path, size = 18 }) => (
   <svg

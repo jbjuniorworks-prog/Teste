@@ -1,15 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import "./App.css";
-import { supabase } from "./supabaseClient";
-import { useTransacoes } from "./hooks/useTransacoes";
-import { ToastProvider, useToast } from "./components/Toast/ToastProvider";
 
-import Auth from "./components/Auth/Auth";
-import Header from "./components/Header/Header";
-import TransactionForm from "./components/TransactionForm/TransactionForm";
-import SpendingChart from "./components/SpendingChart/SpendingChart";
-import UrgentBills from "./components/UrgentBills/UrgentBills";
-import History from "./components/History/History";
+import "./App.css";
+
+import { supabase } from "./lib/supabaseClient";
+import {
+  ToastProvider,
+  useToast,
+} from "./components/shared/Toast/ToastProvider";
+
+import Auth from "./features/auth/components/Auth/Auth";
+import Header from "./features/layout/components/Header/Header";
+import History from "./features/transacoes/components/History/History";
+import SpendingChart from "./features/transacoes/components/SpendingChart/SpendingChart";
+import TransactionForm from "./features/transacoes/components/TransactionForm/TransactionForm";
+import UrgentBills from "./features/transacoes/components/UrgentBills/UrgentBills";
+import { useTransacoes } from "./features/transacoes/hooks/useTransacoes";
 
 function AppContent({ session, handleLogout }) {
   const { showToast } = useToast();
@@ -43,18 +48,23 @@ function AppContent({ session, handleLogout }) {
 
   const transacoesMes = useMemo(
     () => transacoes.filter((t) => t.data_vencimento?.startsWith(mesAtualStr)),
-    [transacoes, mesAtualStr]
+    [transacoes, mesAtualStr],
   );
 
-  const totaisMes = useMemo(() => totais(transacoesMes), [totais, transacoesMes]);
+  const totaisMes = useMemo(
+    () => totais(transacoesMes),
+    [totais, transacoesMes],
+  );
 
   const contasUrgentes = useMemo(
     () =>
       transacoesMes
         .filter((t) => t.tipo === "saida" && !t.pago)
-        .sort((a, b) => (a.data_vencimento || "").localeCompare(b.data_vencimento || ""))
+        .sort((a, b) =>
+          (a.data_vencimento || "").localeCompare(b.data_vencimento || ""),
+        )
         .slice(0, 3),
-    [transacoesMes]
+    [transacoesMes],
   );
 
   const fmtMoney = (valor) =>

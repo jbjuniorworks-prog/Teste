@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import GoalModal from "../GoalModal/GoalModal";
-import ConfirmModal from "../ConfirmModal/ConfirmModal";
+import GoalModal from "../../../objetivos/components/GoalModal/GoalModal";
+import ConfirmModal from "../../../../components/shared/ConfirmModal/ConfirmModal";
 
 const formatMoney = (value) =>
   Number(value || 0).toLocaleString("pt-BR", {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../../lib/supabaseClient";
 
 export function useTransacoes(userId, notify = () => {}) {
   const [transacoes, setTransacoes] = useState([]);

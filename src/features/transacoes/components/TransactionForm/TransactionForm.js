@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CATEGORIAS } from "../../constants/categorias";
+import { CATEGORIAS } from "../../../../constants/categorias";
 
 export default function TransactionForm({ onSubmit, erro, setErro }) {
   const [descricao, setDescricao] = useState("");

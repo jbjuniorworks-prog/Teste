@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { getCat } from "../../constants/categorias";
+import { getCat } from "../../../../constants/categorias";
 
 const money = (v) =>
   Number(v || 0).toLocaleString("pt-BR", {
