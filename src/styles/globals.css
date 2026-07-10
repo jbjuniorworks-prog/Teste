@@ -369,10 +369,11 @@ button {
   font-size: 13px;
 }
 
-.profile-card {
+.profile-hero {
   display: flex;
   align-items: center;
   gap: 14px;
+  padding: 24px 20px 20px;
 }
 
 .profile-avatar {
@@ -388,9 +389,10 @@ button {
   flex-shrink: 0;
 }
 
-.profile-name {
-  display: block;
-  font-size: 16px;
+.profile-greeting {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
   text-transform: capitalize;
 }
 
@@ -425,19 +427,18 @@ button {
   text-align: right;
 }
 
-.logout-button {
-  width: 100%;
-  min-height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 118, 117, 0.25);
-  background: rgba(255, 118, 117, 0.1);
-  color: #ffb3b3;
-  font-weight: 700;
-  transition: background 0.2s ease;
+.profile-logout-link {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 0;
+  transition: color 0.2s ease;
 }
 
-.logout-button:hover {
-  background: rgba(255, 118, 117, 0.16);
+.profile-logout-link:hover {
+  color: #fca5a5;
 }
 
 .profile-accounts-list {

@@ -68,27 +68,19 @@ export default function PerfilPage() {
 
   return (
     <section>
-      <header className="page-header">
+      <div className="profile-hero">
+        <div className="profile-avatar">{inicial}</div>
         <div>
-          <span className="eyebrow">Conta</span>
-          <h1>Perfil</h1>
-          <p>Suas informações de acesso.</p>
+          <p className="profile-greeting">Olá, {nome}</p>
+          <span className="profile-email">{email}</span>
         </div>
-      </header>
+      </div>
 
       <div className="page-body">
-        <article className="panel profile-card">
-          <div className="profile-avatar">{inicial}</div>
-          <div>
-            <strong className="profile-name">{nome}</strong>
-            <span className="profile-email">{email}</span>
-          </div>
-        </article>
-
         <article className="panel">
           <div className="panel-header">
             <div>
-              <h2>Detalhes da conta</h2>
+              <h2>Dados da conta</h2>
             </div>
           </div>
 
@@ -106,7 +98,7 @@ export default function PerfilPage() {
         <article className="panel">
           <div className="panel-header">
             <div>
-              <h2>Contas bancárias</h2>
+              <h2>Conexão bancária</h2>
               <p>Conecte sua conta para importar transações automaticamente.</p>
             </div>
           </div>
@@ -133,9 +125,17 @@ export default function PerfilPage() {
           </button>
         </article>
 
-        <button type="button" className="logout-button" onClick={onLogout}>
-          Sair da conta
-        </button>
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Segurança</h2>
+            </div>
+          </div>
+
+          <button type="button" className="profile-logout-link" onClick={onLogout}>
+            Sair da conta
+          </button>
+        </article>
       </div>
 
       {connectToken && (
