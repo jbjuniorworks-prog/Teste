@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabaseClient";
+import { parseValor, splitParcelas } from "../utils/parcelamento";
 
 const TABELA = "transacoes";
 
@@ -12,14 +13,12 @@ const transacoesService = {
   },
 
   async adicionar({ descricao, valor, parcelas, vencimento, categoriaSel, tipoForm }, userId) {
-    const vLimpo = parseFloat(String(valor).replace(",", "."));
-
     if (tipoForm === "entrada") {
       return supabase.from(TABELA).insert([
         {
           user_id: userId,
           descricao,
-          valor: vLimpo,
+          valor: parseValor(valor),
           tipo: "entrada",
           pago: true,
           categoria: categoriaSel || "outros",
@@ -30,30 +29,14 @@ const transacoesService = {
       ]);
     }
 
-    const nParc = Math.min(Math.max(parseInt(parcelas, 10) || 1, 1), 24);
-    const dBase = new Date(`${vencimento}T12:00:00`);
-    const valorBase = Math.floor((vLimpo / nParc) * 100) / 100;
-    const resto = Number((vLimpo - valorBase * nParc).toFixed(2));
-
-    const lista = Array.from({ length: nParc }, (_, i) => {
-      const d = new Date(dBase);
-      d.setMonth(dBase.getMonth() + i);
-
-      const valorParcela =
-        i === nParc - 1 ? Number((valorBase + resto).toFixed(2)) : valorBase;
-
-      return {
-        user_id: userId,
-        descricao,
-        valor: valorParcela,
-        tipo: "saida",
-        pago: false,
-        categoria: categoriaSel || "outros",
-        data_vencimento: d.toISOString().split("T")[0],
-        num_parcela: i + 1,
-        total_parcelas: nParc,
-      };
-    });
+    const lista = splitParcelas({ valor, parcelas, vencimento }).map((parcela) => ({
+      ...parcela,
+      user_id: userId,
+      descricao,
+      tipo: "saida",
+      pago: false,
+      categoria: categoriaSel || "outros",
+    }));
 
     return supabase.from(TABELA).insert(lista);
   },

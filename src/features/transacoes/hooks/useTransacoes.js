@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import transacoesService from "../services/transacoesService";
 import objetivosService from "../../objetivos/services/objetivosService";
+import { calcularTotais } from "../utils/totais";
 
 export function useTransacoes(userId, notify = () => {}) {
   const [transacoes, setTransacoes] = useState([]);
@@ -258,19 +259,7 @@ export function useTransacoes(userId, notify = () => {}) {
     }
   };
 
-  const totais = useCallback((lista) => {
-    return lista.reduce(
-      (acc, item) => {
-        const valor = Number(item.valor || 0);
-
-        if (item.tipo === "entrada") acc.ganhos += valor;
-        if (item.tipo === "saida") acc.despesas += valor;
-
-        return acc;
-      },
-      { ganhos: 0, despesas: 0 }
-    );
-  }, []);
+  const totais = useCallback((lista) => calcularTotais(lista), []);
 
   return {
     transacoes,
