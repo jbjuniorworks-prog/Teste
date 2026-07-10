@@ -44,56 +44,9 @@ export default function DashboardPage() {
 
   const ultimasTransacoes = useMemo(() => {
     return [...transacoes]
-      .sort((a, b) => (b.data_vencimento || "").localeCompare(a.data_vencimento || ""))
-      .slice(0, 5);
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+      .slice(0, 4);
   }, [transacoes]);
-
-  const insights = useMemo(() => {
-    const lista = [];
-
-    const proximaConta = contasProximas[0];
-    if (proximaConta) {
-      lista.push({
-        title: `Conta próxima do vencimento: ${proximaConta.descricao}`,
-        description: `Vence em ${formatDate(proximaConta.data_vencimento)} · ${money(proximaConta.valor)}.`,
-      });
-    }
-
-    const gastosPorCategoria = transacoesMes
-      .filter((t) => t.tipo === "saida")
-      .reduce((acc, t) => {
-        const key = t.categoria || "outros";
-        acc[key] = (acc[key] || 0) + Number(t.valor || 0);
-        return acc;
-      }, {});
-
-    const [categoriaTopo, valorTopo] =
-      Object.entries(gastosPorCategoria).sort((a, b) => b[1] - a[1])[0] || [];
-
-    if (categoriaTopo) {
-      lista.push({
-        title: `Maior gasto do mês: ${getCat(categoriaTopo).label}`,
-        description: `Total de ${money(valorTopo)} em ${getCat(categoriaTopo).label.toLowerCase()} este mês.`,
-      });
-    }
-
-    const objetivoMaisProximo = [...objetivos]
-      .map((o) => ({
-        ...o,
-        progresso: Number(o.meta) > 0 ? (Number(o.atual || 0) / Number(o.meta)) * 100 : 0,
-      }))
-      .filter((o) => o.progresso < 100)
-      .sort((a, b) => b.progresso - a.progresso)[0];
-
-    if (objetivoMaisProximo) {
-      lista.push({
-        title: `Objetivo mais próximo da meta: ${objetivoMaisProximo.nome}`,
-        description: `${objetivoMaisProximo.progresso.toFixed(0)}% concluído.`,
-      });
-    }
-
-    return lista;
-  }, [contasProximas, transacoesMes, objetivos]);
 
   return (
     <section className="dashboard-page">
@@ -122,6 +75,14 @@ export default function DashboardPage() {
       <div className="page-body">
         <div className="dashboard-main-grid">
           <article className="panel">
+            <UrgentBillsCard contas={contasProximas} onPagar={togglePago} />
+          </article>
+
+          <article className="panel">
+            <CashflowChart transacoesMes={transacoesMes} />
+          </article>
+
+          <article className="panel">
             <div className="panel-header">
               <div>
                 <h2>Últimas transações</h2>
@@ -132,55 +93,54 @@ export default function DashboardPage() {
             {ultimasTransacoes.length === 0 ? (
               <p>Nenhuma transação registrada ainda.</p>
             ) : (
-              <div className="transaction-list">
-                {ultimasTransacoes.map((t) => (
-                  <div key={t.id} className="transaction-item">
-                    <div>
-                      <strong>{t.descricao}</strong>
-                      <span>{getCat(t.categoria).label}</span>
-                    </div>
+              <div className="feed">
+                {ultimasTransacoes.map((t) => {
+                  const c = getCat(t.categoria);
+                  const isEntrada = t.tipo === "entrada";
 
-                    <div className="transaction-meta">
-                      <span>{formatDate(t.data_vencimento)}</span>
-                      <strong>
-                        {t.tipo === "entrada" ? "+ " : "- "}
+                  return (
+                    <article
+                      key={t.id}
+                      className={`feed-card ${isEntrada ? "is-entrada" : "is-saida"} ${
+                        t.pago ? "is-pago" : ""
+                      }`}
+                    >
+                      <div
+                        className="feed-icon"
+                        style={{ background: c.cor || "#555", color: "#fff", fontWeight: 700 }}
+                      >
+                        {(c.label || t.categoria || "?").charAt(0).toUpperCase()}
+                      </div>
+
+                      <div className="feed-info">
+                        <strong>{t.descricao}</strong>
+
+                        <div className="feed-meta">
+                          <span>{formatDate(t.data_vencimento)}</span>
+
+                          {t.total_parcelas > 1 && (
+                            <span className="parcela-badge">
+                              {t.num_parcela}/{t.total_parcelas}x
+                            </span>
+                          )}
+
+                          {t.pago && <span className="pago-badge">Pago</span>}
+
+                          <span className="categoria-badge" style={{ color: c.cor || "#cfcfcf" }}>
+                            {c.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <strong className={`feed-price ${isEntrada ? "price-entrada" : ""}`}>
+                        {isEntrada ? "+" : "-"}
                         {money(t.valor)}
                       </strong>
-                    </div>
-                  </div>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
-          </article>
-
-          <article className="panel">
-            <div className="panel-header">
-              <div>
-                <h2>Resumo rápido</h2>
-                <p>Pontos de atenção para esta semana.</p>
-              </div>
-            </div>
-
-            {insights.length === 0 ? (
-              <p>Sem destaques por enquanto.</p>
-            ) : (
-              <div className="insights-list">
-                {insights.map((item) => (
-                  <div key={item.title} className="insight-item">
-                    <strong>{item.title}</strong>
-                    <p>{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </article>
-
-          <article className="panel">
-            <UrgentBillsCard contas={contasProximas} onPagar={togglePago} />
-          </article>
-
-          <article className="panel">
-            <CashflowChart transacoesMes={transacoesMes} />
           </article>
         </div>
       </div>
