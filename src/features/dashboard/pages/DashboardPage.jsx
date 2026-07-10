@@ -4,6 +4,11 @@ import { getCat } from "../../../constants/categorias";
 import PageHeader from "../../../components/shared/PageHeader/PageHeader";
 import CashflowChart from "../components/CashflowChart";
 import UrgentBillsCard from "../components/UrgentBillsCard";
+import {
+  selecionarContasProximas,
+  selecionarUltimasTransacoes,
+  filtrarTransacoesDoMes,
+} from "../utils/selectors";
 
 const money = (v) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -29,24 +34,21 @@ export default function DashboardPage() {
   } = useOutletContext();
 
   const transacoesMes = useMemo(
-    () => transacoes.filter((t) => t.data_vencimento?.startsWith(mesAtualStr)),
+    () => filtrarTransacoesDoMes(transacoes, mesAtualStr),
     [transacoes, mesAtualStr]
   );
 
   const { ganhos, despesas } = totais(transacoes);
 
-  const contasProximas = useMemo(() => {
-    return transacoes
-      .filter((t) => t.tipo === "saida" && !t.pago)
-      .sort((a, b) => (a.data_vencimento || "").localeCompare(b.data_vencimento || ""))
-      .slice(0, 5);
-  }, [transacoes]);
+  const contasProximas = useMemo(
+    () => selecionarContasProximas(transacoes),
+    [transacoes]
+  );
 
-  const ultimasTransacoes = useMemo(() => {
-    return [...transacoes]
-      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
-      .slice(0, 4);
-  }, [transacoes]);
+  const ultimasTransacoes = useMemo(
+    () => selecionarUltimasTransacoes(transacoes),
+    [transacoes]
+  );
 
   return (
     <section className="dashboard-page">
