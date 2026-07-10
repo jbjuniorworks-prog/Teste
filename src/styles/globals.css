@@ -157,6 +157,14 @@ button {
   border-color: rgba(148, 163, 184, 0.28);
 }
 
+.dashboard-updated {
+  margin: 4px 0 16px;
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 /* ── Dashboard body ── */
 .dashboard-page {
   width: 100%;

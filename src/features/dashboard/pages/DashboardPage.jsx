@@ -16,6 +16,9 @@ const money = (v) =>
 const formatDate = (str) =>
   str ? new Date(`${str}T12:00:00`).toLocaleDateString("pt-BR") : "";
 
+const hojeFormatado = () =>
+  new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
+
 export default function DashboardPage() {
   const {
     transacoes,
@@ -66,24 +69,10 @@ export default function DashboardPage() {
         onLogout={onLogout}
       />
 
-      <header className="page-header">
-        <div>
-          <span className="eyebrow">Visão geral</span>
-          <h1>Dashboard</h1>
-          <p>Acompanhe saldo, movimentações e metas em um só lugar.</p>
-        </div>
-      </header>
-
       <div className="page-body">
+        <p className="dashboard-updated">Atualizado hoje, {hojeFormatado()}</p>
+
         <div className="dashboard-main-grid">
-          <article className="panel">
-            <UrgentBillsCard contas={contasProximas} onPagar={togglePago} />
-          </article>
-
-          <article className="panel">
-            <CashflowChart transacoesMes={transacoesMes} />
-          </article>
-
           <article className="panel">
             <div className="panel-header">
               <div>
@@ -143,6 +132,14 @@ export default function DashboardPage() {
                 })}
               </div>
             )}
+          </article>
+
+          <article className="panel">
+            <UrgentBillsCard contas={contasProximas} onPagar={togglePago} />
+          </article>
+
+          <article className="panel">
+            <CashflowChart transacoesMes={transacoesMes} />
           </article>
         </div>
       </div>
