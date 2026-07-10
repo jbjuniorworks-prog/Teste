@@ -23,10 +23,14 @@
   letter-spacing: 0.08em;
 }
 
+.quick-actions-scroll {
+  position: relative;
+}
+
 .quick-actions-carousel {
   display: flex;
-  gap: 10px;
-  padding: 4px 20px 8px 20px;
+  gap: 8px;
+  padding: 2px 20px 4px 20px;
   margin: 0 -20px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -44,46 +48,54 @@
   display: none;
 }
 
-.cat-btn {
-  flex: 0 0 92px;
-  min-height: 92px;
+.quick-actions-fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 4px;
+  width: 36px;
+  background: linear-gradient(to right, rgba(11, 17, 32, 0), #0b1120 78%);
+  pointer-events: none;
+}
+
+.cat-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px 0 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
+  border-radius: 999px;
   background: #131720;
   color: #d7dbeb;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
   transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
 
-.cat-btn:hover {
+.cat-chip:hover {
   background: #191f2b;
   transform: translateY(-1px);
 }
 
-.cat-btn span {
-  font-size: 13px;
-}
-
-.cat-btn.cat-active {
+.cat-chip.cat-active {
   border-color: #7b61ff;
   background: rgba(123, 97, 255, 0.16);
+  color: #fff;
 }
 
-.cat-initial {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
+.cat-chip-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  color: #f7f8fb;
-  font-size: 16px;
-  font-weight: 700;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
 .glass-form {
@@ -174,13 +186,15 @@
 
 .submit-main {
   width: 100%;
-  margin-top: 14px;
+  margin-top: 20px;
   border: 0;
   border-radius: 14px;
   background: linear-gradient(135deg, #7b61ff, #9c8dff);
   color: #fff;
-  padding: 14px;
+  padding: 16px;
+  font-size: 15px;
   font-weight: 800;
+  box-shadow: 0 12px 28px rgba(123, 97, 255, 0.28);
   display: block;
   transition: opacity 150ms ease, transform 150ms ease;
 }

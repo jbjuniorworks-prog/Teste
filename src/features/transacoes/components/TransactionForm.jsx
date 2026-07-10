@@ -83,29 +83,35 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
     <>
       <section className="quick-actions-wrap">
         <div className="quick-actions-head">
-          <h3>Categorias</h3>
-          <small>Deslize para ver mais</small>
+          <h3>Categoria</h3>
         </div>
 
-        <div className="quick-actions-carousel" aria-label="Selecionar categoria">
-          {Object.entries(CATEGORIAS).map(([key, cat]) => (
-            <button
-              key={key}
-              type="button"
-              className={`cat-btn ${categoriaSel === key ? "cat-active" : ""}`}
-              onClick={() => {
-                setCategoriaSel(key);
-                limparErro();
-              }}
-              aria-pressed={categoriaSel === key}
-              title={cat.label}
-            >
-              <span className="cat-initial" aria-hidden="true">
-                {(cat.label || key).charAt(0).toUpperCase()}
-              </span>
-              <span>{cat.label}</span>
-            </button>
-          ))}
+        <div className="quick-actions-scroll">
+          <div className="quick-actions-carousel" aria-label="Selecionar categoria">
+            {Object.entries(CATEGORIAS).map(([key, cat]) => (
+              <button
+                key={key}
+                type="button"
+                className={`cat-chip ${categoriaSel === key ? "cat-active" : ""}`}
+                onClick={() => {
+                  setCategoriaSel(key);
+                  limparErro();
+                }}
+                aria-pressed={categoriaSel === key}
+                title={cat.label}
+              >
+                <span
+                  className="cat-chip-dot"
+                  aria-hidden="true"
+                  style={{ background: cat.cor }}
+                >
+                  {(cat.label || key).charAt(0).toUpperCase()}
+                </span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="quick-actions-fade" aria-hidden="true" />
         </div>
       </section>
 
@@ -136,7 +142,7 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
           </button>
         </div>
 
-        <div style={{ marginTop: "14px" }}>
+        <div style={{ marginTop: "18px" }}>
           <label htmlFor="tf-descricao">
             {tipoForm === "entrada" ? "Origem da receita" : "Descrição da despesa"}
           </label>
@@ -159,7 +165,7 @@ export default function TransactionForm({ onSubmit, erro, setErro }) {
             display: "grid",
             gridTemplateColumns: tipoForm === "saida" ? "1fr 1fr 72px" : "1fr 1fr",
             gap: "10px",
-            marginTop: "12px",
+            marginTop: "18px",
           }}
         >
           <div>

@@ -152,16 +152,23 @@ export default function TransactionsTable({
 
       {tFiltradas.length > 0 && (
         <div className="history-mini-summary">
-          <span className="history-total history-total-in">
-            +{money(totais.entradas)}
-          </span>
-          <span className="history-total history-total-out">
-            -{money(totais.saidas)}
-          </span>
-          <span className="history-total history-total-neutral">
-            {totais.abertas} em aberto · {totais.pagas} pagas
-          </span>
+          <span className="history-summary-label">Resumo do período</span>
+          <div className="history-summary-values">
+            <span className="history-total history-total-in">
+              +{money(totais.entradas)}
+            </span>
+            <span className="history-total history-total-out">
+              -{money(totais.saidas)}
+            </span>
+            <span className="history-total history-total-neutral">
+              {totais.abertas} em aberto · {totais.pagas} pagas
+            </span>
+          </div>
         </div>
+      )}
+
+      {tFiltradas.length > 0 && !loading && (
+        <div className="history-list-label">Movimentações</div>
       )}
 
       {loading && (
