@@ -18,6 +18,9 @@ export default function LoginForm() {
     if (message.includes("Invalid login credentials")) return "Email ou senha incorretos.";
     if (message.includes("Email not confirmed")) return "Confirme seu email antes de entrar.";
     if (message.includes("Unable to validate email")) return "Email inválido.";
+    if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+      return "Erro de conexão com o servidor. Verifique sua internet ou tente novamente em instantes.";
+    }
     return "Não foi possível concluir a ação.";
   }
 
@@ -59,6 +62,7 @@ export default function LoginForm() {
       setUser(data.user ?? null);
       navigate("/", { replace: true });
     } catch (error) {
+      console.error("[LoginForm] signIn:", error);
       setErrorMessage(getErrorMessage(error?.message || error?.error_description || ""));
     } finally {
       setLoading(false);

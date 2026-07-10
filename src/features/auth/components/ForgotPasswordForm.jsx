@@ -32,7 +32,14 @@ export default function ForgotPasswordForm() {
 
       setSuccessMessage("Enviamos um link de redefinição para o seu email.");
     } catch (error) {
-      setErrorMessage("Não foi possível enviar o email. Tente novamente.");
+      console.error("[ForgotPasswordForm] resetPassword:", error);
+
+      const message = error?.message || "";
+      setErrorMessage(
+        message.includes("Failed to fetch") || message.includes("NetworkError")
+          ? "Erro de conexão com o servidor. Verifique sua internet ou tente novamente em instantes."
+          : "Não foi possível enviar o email. Tente novamente."
+      );
     } finally {
       setLoading(false);
     }

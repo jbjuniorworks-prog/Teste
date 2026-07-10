@@ -20,6 +20,9 @@ export default function RegisterForm() {
     if (message.includes("User already registered")) return "Este email já está cadastrado.";
     if (message.includes("Password should be at least")) return "A senha deve ter no mínimo 6 caracteres.";
     if (message.includes("Unable to validate email")) return "Email inválido.";
+    if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+      return "Erro de conexão com o servidor. Verifique sua internet ou tente novamente em instantes.";
+    }
     return "Não foi possível concluir a ação.";
   }
 
@@ -72,6 +75,7 @@ export default function RegisterForm() {
 
       setSuccessMessage("Cadastro realizado. Verifique seu email para confirmar a conta.");
     } catch (error) {
+      console.error("[RegisterForm] signUp:", error);
       setErrorMessage(getErrorMessage(error?.message || error?.error_description || ""));
     } finally {
       setLoading(false);
