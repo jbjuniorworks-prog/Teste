@@ -1,0 +1,375 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #05060a;
+  color: #e5e7eb;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ── App shell: centered phone-width column at any viewport size ── */
+.phone-outer {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  background: #05060a;
+}
+
+.phone-shell {
+  width: 100%;
+  max-width: 460px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #0f172a 0%, #0b1120 100%);
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.5);
+}
+
+.phone-main {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 24px;
+}
+
+.bottom-tab-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 8px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+}
+
+.tab-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: 12px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.tab-link.is-active {
+  color: #86efac;
+}
+
+/* ── Page header (title + optional action) ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 20px 20px 0;
+  margin-bottom: 20px;
+}
+
+.page-body {
+  padding: 0 20px 24px;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.page-header h1 {
+  font-size: 28px;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.page-header p {
+  margin: 8px 0 0;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.primary-button,
+.ghost-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.primary-button {
+  background: #22c55e;
+  color: #04130a;
+  border: none;
+  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.18);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.primary-button:hover {
+  background: #16a34a;
+}
+
+.primary-button:active {
+  transform: translateY(1px);
+}
+
+.ghost-button {
+  background: rgba(148, 163, 184, 0.08);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.ghost-button:hover {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+/* ── Dashboard body ── */
+.dashboard-page {
+  width: 100%;
+}
+
+.dashboard-body {
+  padding: 20px 18px 12px;
+}
+
+.dashboard-main-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: #111827;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.16);
+  padding: 18px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.panel-header p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.transaction-list,
+.goals-list,
+.insights-list {
+  display: grid;
+  gap: 12px;
+}
+
+.transaction-item,
+.insight-item {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.transaction-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.transaction-item span {
+  color: #94a3b8;
+}
+
+.transaction-item strong,
+.goal-top strong,
+.insight-item strong {
+  display: block;
+  font-size: 14px;
+}
+
+.transaction-meta {
+  text-align: right;
+}
+
+.transaction-meta strong {
+  font-size: 14px;
+}
+
+.transaction-meta span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.goal-item {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.goal-item small {
+  color: #94a3b8;
+}
+
+.goal-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-bar div {
+  height: 100%;
+  border-radius: inherit;
+  background: #22c55e;
+}
+
+.insight-item p {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #7b61ff, #9c8dff);
+  flex-shrink: 0;
+}
+
+.profile-name {
+  display: block;
+  font-size: 16px;
+  text-transform: capitalize;
+}
+
+.profile-email {
+  display: block;
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.profile-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.profile-info-row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.profile-info-row span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.profile-info-row strong {
+  font-size: 13px;
+  text-align: right;
+}
+
+.logout-button {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 118, 117, 0.25);
+  background: rgba(255, 118, 117, 0.1);
+  color: #ffb3b3;
+  font-weight: 700;
+  transition: background 0.2s ease;
+}
+
+.logout-button:hover {
+  background: rgba(255, 118, 117, 0.16);
+}
+
+.profile-accounts-list {
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 360px) {
+  .page-body {
+    padding: 0 14px 20px;
+  }
+
+  .page-header {
+    padding: 16px 14px 0;
+  }
+
+  .page-header h1 {
+    font-size: 24px;
+  }
+}

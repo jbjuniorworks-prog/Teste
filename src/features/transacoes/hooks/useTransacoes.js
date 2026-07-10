@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { supabase } from "../../../lib/supabaseClient";
+import transacoesService from "../services/transacoesService";
+import objetivosService from "../../objetivos/services/objetivosService";
 
 export function useTransacoes(userId, notify = () => {}) {
   const [transacoes, setTransacoes] = useState([]);
@@ -20,36 +21,31 @@ export function useTransacoes(userId, notify = () => {}) {
     }
 
     setLoading(true);
-    setErro("");
 
-    try {
-      const [
-        { data: tData, error: tError },
-        { data: oData, error: oError },
-      ] = await Promise.all([
-        supabase
-          .from("transacoes")
-          .select("*")
-          .eq("user_id", userId)
-          .order("data_vencimento", { ascending: true }),
-        supabase
-          .from("objetivos")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: true }),
-      ]);
+    const [
+      { data: tData, error: tError },
+      { data: oData, error: oError },
+    ] = await Promise.all([
+      transacoesService.listar(userId),
+      objetivosService.listar(userId),
+    ]);
 
-      if (tError) throw tError;
-      if (oError) throw oError;
-
+    if (tError) {
+      console.error("[useTransacoes] buscar transacoes:", tError.message);
+    } else {
       setTransacoes(tData || []);
-      setObjetivos(oData || []);
-    } catch (e) {
-      console.error("[useTransacoes] buscar:", e.message);
-      setErro("Erro ao carregar dados. Tente novamente.");
-    } finally {
-      setLoading(false);
     }
+
+    if (oError) {
+      console.error("[useTransacoes] buscar objetivos:", oError.message);
+    } else {
+      setObjetivos(oData || []);
+    }
+
+    setErro(
+      tError || oError ? "Erro ao carregar dados. Tente novamente." : ""
+    );
+    setLoading(false);
   }, [userId]);
 
   useEffect(() => {
@@ -59,111 +55,39 @@ export function useTransacoes(userId, notify = () => {}) {
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`financeiro-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "transacoes",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          buscar();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "objetivos",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          buscar();
-        }
-      )
-      .subscribe();
+    const unsubscribeTransacoes = transacoesService.subscribe(userId, buscar);
+    const unsubscribeObjetivos = objetivosService.subscribe(userId, buscar);
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubscribeTransacoes();
+      unsubscribeObjetivos();
     };
   }, [userId, buscar]);
 
-  const adicionarTransacao = async ({
-    descricao,
-    valor,
-    parcelas,
-    vencimento,
-    categoriaSel,
-    tipoForm,
-  }) => {
+  const adicionarTransacao = async (dadosForm) => {
     if (!userId) {
-      setErro("Usuário não autenticado.");
+      setErro("UsuÃ¡rio nÃ£o autenticado.");
       return false;
     }
 
-    const vLimpo = parseFloat(String(valor).replace(",", "."));
+    const vLimpo = parseFloat(String(dadosForm.valor).replace(",", "."));
 
     if (Number.isNaN(vLimpo) || vLimpo <= 0) {
-      setErro("Informe um valor válido.");
+      setErro("Informe um valor vÃ¡lido.");
       return false;
     }
 
     try {
-      if (tipoForm === "entrada") {
-        const { error } = await supabase.from("transacoes").insert([
-          {
-            user_id: userId,
-            descricao,
-            valor: vLimpo,
-            tipo: "entrada",
-            pago: true,
-            categoria: categoriaSel || "outros",
-            data_vencimento: vencimento,
-            num_parcela: 1,
-            total_parcelas: 1,
-          },
-        ]);
+      const { error } = await transacoesService.adicionar(dadosForm, userId);
+      if (error) throw error;
 
-        if (error) throw error;
-      } else {
-        const nParc = Math.min(Math.max(parseInt(parcelas, 10) || 1, 1), 24);
-        const dBase = new Date(`${vencimento}T12:00:00`);
-        const valorBase = Math.floor((vLimpo / nParc) * 100) / 100;
-        const resto = Number((vLimpo - valorBase * nParc).toFixed(2));
-
-        const lista = Array.from({ length: nParc }, (_, i) => {
-          const d = new Date(dBase);
-          d.setMonth(dBase.getMonth() + i);
-
-          const valorParcela =
-            i === nParc - 1 ? Number((valorBase + resto).toFixed(2)) : valorBase;
-
-          return {
-            user_id: userId,
-            descricao,
-            valor: valorParcela,
-            tipo: "saida",
-            pago: false,
-            categoria: categoriaSel || "outros",
-            data_vencimento: d.toISOString().split("T")[0],
-            num_parcela: i + 1,
-            total_parcelas: nParc,
-          };
-        });
-
-        const { error } = await supabase.from("transacoes").insert(lista);
-        if (error) throw error;
-      }
+      await buscar();
 
       notify({
         type: "success",
-        title: "Transação salva",
+        title: "TransaÃ§Ã£o salva",
         message:
-          tipoForm === "entrada"
+          dadosForm.tipoForm === "entrada"
             ? "A entrada foi registrada com sucesso."
             : "A despesa foi registrada com sucesso.",
       });
@@ -171,14 +95,14 @@ export function useTransacoes(userId, notify = () => {}) {
       return true;
     } catch (e) {
       console.error("[useTransacoes] adicionarTransacao:", e.message);
-      setErro("Erro ao salvar transação. Tente novamente.");
+      setErro("Erro ao salvar transaÃ§Ã£o. Tente novamente.");
       return false;
     }
   };
 
   const togglePago = async (transacao) => {
     if (!userId) {
-      setErro("Usuário não autenticado.");
+      setErro("UsuÃ¡rio nÃ£o autenticado.");
       return;
     }
 
@@ -189,20 +113,15 @@ export function useTransacoes(userId, notify = () => {}) {
     );
 
     try {
-      const { error } = await supabase
-        .from("transacoes")
-        .update({ pago: !transacao.pago })
-        .eq("id", transacao.id)
-        .eq("user_id", userId);
-
+      const { error } = await transacoesService.togglePago(transacao, userId);
       if (error) throw error;
 
       notify({
         type: "success",
         title: transacao.pago ? "Pagamento desfeito" : "Conta paga",
         message: transacao.pago
-          ? "A transação voltou para em aberto."
-          : "A transação foi marcada como paga.",
+          ? "A transaÃ§Ã£o voltou para em aberto."
+          : "A transaÃ§Ã£o foi marcada como paga.",
       });
     } catch (e) {
       console.error("[useTransacoes] togglePago:", e.message);
@@ -233,24 +152,19 @@ export function useTransacoes(userId, notify = () => {}) {
     setTransacoes((prev) => prev.filter((item) => item.id !== id));
 
     try {
-      const { error } = await supabase
-        .from("transacoes")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", userId);
-
+      const { error } = await transacoesService.deletar(id, userId);
       if (error) throw error;
 
       notify({
         type: "success",
-        title: "Transação excluída",
-        message: "A transação foi removida com sucesso.",
+        title: "TransaÃ§Ã£o excluÃ­da",
+        message: "A transaÃ§Ã£o foi removida com sucesso.",
       });
 
       return true;
     } catch (e) {
       console.error("[useTransacoes] deletarTransacao:", e.message);
-      setErro("Erro ao excluir transação.");
+      setErro("Erro ao excluir transaÃ§Ã£o.");
       await buscar();
       return false;
     }
@@ -258,23 +172,15 @@ export function useTransacoes(userId, notify = () => {}) {
 
   const adicionarObjetivo = async (novoObj) => {
     if (!userId) {
-      setErro("Usuário não autenticado.");
+      setErro("UsuÃ¡rio nÃ£o autenticado.");
       return false;
     }
 
     try {
-      const { error } = await supabase.from("objetivos").insert([
-        {
-          ...novoObj,
-          user_id: userId,
-          atual: Number(novoObj.atual || 0),
-          meta: Number(novoObj.meta || 0),
-          cor: novoObj.cor || "#6C5CE7",
-          letra: (novoObj.nome || "O").charAt(0).toUpperCase(),
-        },
-      ]);
-
+      const { error } = await objetivosService.adicionar(novoObj, userId);
       if (error) throw error;
+
+      await buscar();
 
       notify({
         type: "success",
@@ -292,29 +198,20 @@ export function useTransacoes(userId, notify = () => {}) {
 
   const atualizarObjetivo = async (obj) => {
     if (!userId) {
-      setErro("Usuário não autenticado.");
+      setErro("UsuÃ¡rio nÃ£o autenticado.");
       return false;
     }
 
     try {
-      const { error } = await supabase
-        .from("objetivos")
-        .update({
-          nome: obj.nome,
-          meta: Number(obj.meta || 0),
-          atual: Number(obj.atual || 0),
-          cor: obj.cor || "#6C5CE7",
-          letra: (obj.nome || "O").charAt(0).toUpperCase(),
-        })
-        .eq("id", obj.id)
-        .eq("user_id", userId);
-
+      const { error } = await objetivosService.atualizar(obj, userId);
       if (error) throw error;
+
+      await buscar();
 
       notify({
         type: "success",
         title: "Objetivo atualizado",
-        message: "As alterações foram salvas.",
+        message: "As alteraÃ§Ãµes foram salvas.",
       });
 
       return true;
@@ -341,17 +238,14 @@ export function useTransacoes(userId, notify = () => {}) {
     setConfirmandoObjetivoId(null);
 
     try {
-      const { error } = await supabase
-        .from("objetivos")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", userId);
-
+      const { error } = await objetivosService.deletar(id, userId);
       if (error) throw error;
+
+      await buscar();
 
       notify({
         type: "success",
-        title: "Objetivo excluído",
+        title: "Objetivo excluÃ­do",
         message: "O objetivo foi removido com sucesso.",
       });
 

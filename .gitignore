@@ -27,3 +27,4 @@ yarn-error.log*
 .vercel
 .vscode/
 .supabase-backup/
+supabase/.temp/

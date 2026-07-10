@@ -24,9 +24,9 @@ export default function ToastViewport({ toasts, onClose }) {
             type="button"
             className="toast-close"
             onClick={() => onClose(toast.id)}
-            aria-label="Fechar notificação"
+            aria-label="Fechar notificaÃ§Ã£o"
           >
-            ×
+            Ã—
           </button>
         </div>
       ))}
